@@ -8,6 +8,7 @@ type ProductQuantizationIndex struct {
 	numFeatures  int
 	numSubspaces int
 	subspaces    []kmeans.KMeans
+	subDataset   [][]float64
 }
 
 func NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters int) (*ProductQuantizationIndex, error) {
@@ -36,10 +37,30 @@ func NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters int) (*P
 		numFeatures:  numFeatures,
 		numSubspaces: numSubspaces,
 		subspaces:    subspaces,
+		subDataset:   make([][]float64, numSubspaces),
 	}, nil
 }
 
 func (index *ProductQuantizationIndex) Add(data []float64) error {
+	if len(data) == 0 {
+		return ErrEmptyData
+	}
+
+	if len(data)%index.numFeatures != 0 {
+		return ErrInvalidDataLength
+	}
+
+	numVectors := len(data) / index.numFeatures
+	subspaceSize := index.numFeatures / index.numSubspaces
+
+	for i := range index.numSubspaces {
+		for v := range numVectors {
+			start := v*index.numFeatures + i*subspaceSize
+			end := start + subspaceSize
+			subvector := data[start:end]
+			index.subDataset[i] = append(index.subDataset[i], subvector...)
+		}
+	}
 	return nil
 }
 
