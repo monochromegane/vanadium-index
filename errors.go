@@ -9,3 +9,5 @@ var ErrInvalidNumFeatures = fmt.Errorf("number of features must be greater than 
 var ErrEmptyData = fmt.Errorf("data is empty")
 
 var ErrInvalidK = fmt.Errorf("k must be greater than 0")
+
+var ErrInvalidNumSubspaces = fmt.Errorf("number of subspaces must be greater than 0")
