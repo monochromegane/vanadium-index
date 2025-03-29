@@ -8,7 +8,9 @@ func TestProductQuantizationIndexAdd(t *testing.T) {
 	numFeatures := 4
 	numSubspaces := 2
 	numClusters := 1
-	index, err := NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters)
+	numIterations := 10
+	tol := 0.001
+	index, err := NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters, numIterations, tol)
 	if err != nil {
 		t.Fatalf("Failed to create index: %v", err)
 	}
@@ -54,4 +56,34 @@ func TestProductQuantizationIndexAdd(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestProductQuantizationIndexTrain(t *testing.T) {
+	numFeatures := 4
+	numSubspaces := 2
+	numClusters := 1
+	numIterations := 10
+	tol := 0.001
+	index, err := NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters, numIterations, tol)
+	if err != nil {
+		t.Fatalf("Failed to create index: %v", err)
+	}
+
+	data := []float64{
+		0.1, 0.2, 0.3, 0.4,
+		0.5, 0.6, 0.7, 0.8,
+		0.9, 1.0, 1.1, 1.2,
+		1.3, 1.4, 1.5, 1.6,
+	}
+
+	err = index.Add(data)
+	if err != nil {
+		t.Fatalf("Failed to add data: %v", err)
+	}
+
+	err = index.Train(data)
+	if err != nil {
+		t.Fatalf("Failed to train index: %v", err)
+	}
+
 }

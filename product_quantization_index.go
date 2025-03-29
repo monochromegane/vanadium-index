@@ -5,13 +5,15 @@ import (
 )
 
 type ProductQuantizationIndex struct {
-	numFeatures  int
-	numSubspaces int
-	subspaces    []kmeans.KMeans
-	subDataset   [][]float64
+	numFeatures   int
+	numSubspaces  int
+	numIterations int
+	tol           float64
+	subspaces     []kmeans.KMeans
+	subDataset    [][]float64
 }
 
-func NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters int) (*ProductQuantizationIndex, error) {
+func NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters, numIterations int, tol float64) (*ProductQuantizationIndex, error) {
 	if numFeatures <= 0 {
 		return nil, ErrInvalidNumFeatures
 	}
@@ -34,10 +36,12 @@ func NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters int) (*P
 		subspaces[i] = subspace
 	}
 	return &ProductQuantizationIndex{
-		numFeatures:  numFeatures,
-		numSubspaces: numSubspaces,
-		subspaces:    subspaces,
-		subDataset:   make([][]float64, numSubspaces),
+		numFeatures:   numFeatures,
+		numSubspaces:  numSubspaces,
+		numIterations: numIterations,
+		tol:           tol,
+		subspaces:     subspaces,
+		subDataset:    make([][]float64, numSubspaces),
 	}, nil
 }
 
@@ -69,5 +73,11 @@ func (index *ProductQuantizationIndex) Search(query []float64, k int) ([][]int, 
 }
 
 func (index *ProductQuantizationIndex) Train(data []float64) error {
+	for i := range index.numSubspaces {
+		_, _, err := index.subspaces[i].Train(index.subDataset[i], index.numIterations, index.tol)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
