@@ -11,6 +11,8 @@ type ProductQuantizationIndex struct {
 	tol           float64
 	subspaces     []kmeans.KMeans
 	subDataset    [][]float64
+	codebooks     [][][]float64
+	codes         [][]int
 }
 
 func NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters, numIterations int, tol float64) (*ProductQuantizationIndex, error) {
@@ -42,6 +44,8 @@ func NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters, numIter
 		tol:           tol,
 		subspaces:     subspaces,
 		subDataset:    make([][]float64, numSubspaces),
+		codebooks:     make([][][]float64, numSubspaces),
+		codes:         make([][]int, numSubspaces),
 	}, nil
 }
 
@@ -73,11 +77,26 @@ func (index *ProductQuantizationIndex) Search(query []float64, k int) ([][]int, 
 }
 
 func (index *ProductQuantizationIndex) Train(data []float64) error {
+	dataSize := len(data) / index.numFeatures
+
 	for i := range index.numSubspaces {
 		_, _, err := index.subspaces[i].Train(index.subDataset[i], index.numIterations, index.tol)
 		if err != nil {
 			return err
 		}
+
+		centroids := index.subspaces[i].Centroids()
+		index.codebooks[i] = centroids
+
+		code := make([]int, dataSize)
+		err = index.subspaces[i].Predict(index.subDataset[i], func(row int, minCol int, minVal float64) error {
+			code[row] = minCol
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		index.codes[i] = code
 	}
 	return nil
 }
