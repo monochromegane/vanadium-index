@@ -17,6 +17,10 @@ func NewFlatIndex(numFeatures int) (*FlatIndex, error) {
 	return &FlatIndex{numFeatures: numFeatures}, nil
 }
 
+func (index *FlatIndex) Train(data []float64) error {
+	return nil
+}
+
 func (index *FlatIndex) Add(data []float64) error {
 	if len(data) == 0 {
 		return ErrEmptyData
@@ -88,10 +92,6 @@ func (index *FlatIndex) Search(query []float64, k int) ([][]int, error) {
 	}
 
 	return results, nil
-}
-
-func (index *FlatIndex) Train(data []float64) error {
-	return nil
 }
 
 func normVec(X *mat.Dense) *mat.VecDense {
