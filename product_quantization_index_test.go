@@ -4,64 +4,10 @@ import (
 	"testing"
 )
 
-func TestProductQuantizationIndexAdd(t *testing.T) {
+func TestProductQuantizationIndex(t *testing.T) {
 	numFeatures := 4
 	numSubspaces := 2
-	numClusters := 1
-	numIterations := 10
-	tol := 0.001
-	index, err := NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters, numIterations, tol)
-	if err != nil {
-		t.Fatalf("Failed to create index: %v", err)
-	}
-
-	dataSet := [][]float64{
-		{
-			1, 2, 3, 4,
-			5, 6, 7, 8,
-		},
-		{
-			9, 10, 11, 12,
-		},
-	}
-
-	for _, data := range dataSet {
-		err = index.Add(data)
-		if err != nil {
-			t.Fatalf("Failed to add data: %v", err)
-		}
-	}
-
-	expectedSubDataset := [][]float64{
-		{
-			1, 2,
-			5, 6,
-			9, 10,
-		},
-		{
-			3, 4,
-			7, 8,
-			11, 12,
-		},
-	}
-
-	for i := range index.subDataset {
-		subDataset := index.subDataset[i]
-		if len(subDataset) != len(expectedSubDataset[i]) {
-			t.Fatalf("Subdataset length does not match expected value")
-		}
-		for j := range subDataset {
-			if subDataset[j] != expectedSubDataset[i][j] {
-				t.Fatalf("Subdataset does not match expected value")
-			}
-		}
-	}
-}
-
-func TestProductQuantizationIndexTrain(t *testing.T) {
-	numFeatures := 4
-	numSubspaces := 2
-	numClusters := 1
+	numClusters := 4
 	numIterations := 10
 	tol := 0.001
 	index, err := NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters, numIterations, tol)
@@ -76,14 +22,28 @@ func TestProductQuantizationIndexTrain(t *testing.T) {
 		1.3, 1.4, 1.5, 1.6,
 	}
 
-	err = index.Add(data)
-	if err != nil {
-		t.Fatalf("Failed to add data: %v", err)
-	}
-
 	err = index.Train(data)
 	if err != nil {
 		t.Fatalf("Failed to train index: %v", err)
 	}
 
+	for i := 0; i < len(data); i += 4 {
+		err = index.Add(data[i : i+4])
+		if err != nil {
+			t.Fatalf("Failed to add data: %v", err)
+		}
+	}
+
+	query := data
+
+	results, err := index.Search(query, 1)
+	if err != nil {
+		t.Fatalf("Failed to search index: %v", err)
+	}
+
+	for i, result := range results {
+		if result[0] != i {
+			t.Fatalf("result[%d] = %d, expected %d", i, result[0], i)
+		}
+	}
 }
