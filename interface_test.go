@@ -14,7 +14,7 @@ func TestFlatIndexInterface(t *testing.T) {
 
 func TestProductQuantizationIndexInterface(t *testing.T) {
 	var index ANNIndex
-	index, _ = NewProductQuantizationIndex(2, 2, 2, 10, 0.001)
+	index, _ = NewProductQuantizationIndex(2, 2, WithPQNumClusters(2), WithPQNumIterations(10), WithPQTol(0.001))
 	if _, ok := index.(*ProductQuantizationIndex); !ok {
 		t.Fatalf("index is not a ProductQuantizationIndex")
 	}

@@ -10,8 +10,8 @@ import (
 type ProductQuantizationIndex struct {
 	numFeatures    int
 	numSubspaces   int
-	numClusters    int
 	numSubFeatures int
+	numClusters    int
 	numIterations  int
 	tol            float64
 	isTrained      bool
@@ -20,51 +20,51 @@ type ProductQuantizationIndex struct {
 	codes          [][]int
 }
 
-func NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters, numIterations int, tol float64) (*ProductQuantizationIndex, error) {
+func NewProductQuantizationIndex(numFeatures, numSubspaces int, opts ...ProductQuantizationIndexOption) (*ProductQuantizationIndex, error) {
 	if numFeatures <= 0 {
 		return nil, ErrInvalidNumFeatures
 	}
 	if numSubspaces <= 0 || numSubspaces > numFeatures || numFeatures%numSubspaces != 0 {
 		return nil, ErrInvalidNumSubspaces
 	}
-	if numClusters <= 0 {
-		return nil, ErrInvalidNumClusters
+	numSubFeatures := numFeatures / numSubspaces
+
+	index := &ProductQuantizationIndex{
+		numFeatures:    numFeatures,
+		numSubspaces:   numSubspaces,
+		numSubFeatures: numSubFeatures,
+		isTrained:      false,
+		codebooks:      make([][][]float64, numSubspaces),
+		codes:          make([][]int, numSubspaces),
+		clusters:       make([]kmeans.KMeans, numSubspaces),
+
+		// Default values
+		numClusters:   256,
+		numIterations: 100,
+		tol:           1e-6,
 	}
-	if numIterations <= 0 {
-		return nil, ErrInvalidNumIterations
-	}
-	if tol <= 0 {
-		return nil, ErrInvalidTol
+	for _, opt := range opts {
+		err := opt(index)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	clusters := make([]kmeans.KMeans, numSubspaces)
-	numSubFeatures := numFeatures / numSubspaces
-	for i := range numSubspaces {
+	for i := range index.numSubspaces {
 		var err error
 		var cluster kmeans.KMeans
 		if numSubFeatures > 256 {
-			cluster, err = kmeans.NewLinearAlgebraKMeans(numClusters, numSubFeatures, kmeans.INIT_KMEANS_PLUS_PLUS)
+			cluster, err = kmeans.NewLinearAlgebraKMeans(index.numClusters, numSubFeatures, kmeans.INIT_KMEANS_PLUS_PLUS)
 		} else {
-			cluster, err = kmeans.NewNaiveKMeans(numClusters, numSubFeatures, kmeans.INIT_RANDOM)
+			cluster, err = kmeans.NewNaiveKMeans(index.numClusters, numSubFeatures, kmeans.INIT_RANDOM)
 		}
 		if err != nil {
 			return nil, err
 		}
-		clusters[i] = cluster
+		index.clusters[i] = cluster
 	}
 
-	return &ProductQuantizationIndex{
-		numFeatures:    numFeatures,
-		numSubspaces:   numSubspaces,
-		numClusters:    numClusters,
-		numSubFeatures: numSubFeatures,
-		numIterations:  numIterations,
-		tol:            tol,
-		isTrained:      false,
-		clusters:       clusters,
-		codebooks:      make([][][]float64, numSubspaces),
-		codes:          make([][]int, numSubspaces),
-	}, nil
+	return index, nil
 }
 
 func (index *ProductQuantizationIndex) Train(data []float64) error {
