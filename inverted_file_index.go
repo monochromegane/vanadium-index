@@ -12,6 +12,7 @@ type InvertedFileIndex struct {
 	numClusters    int
 	numIterations  int
 	tol            float64
+	isTrained      bool
 	cluster        kmeans.KMeans
 	indexes        []ANNIndex
 	pqNumSubspaces int
@@ -21,6 +22,7 @@ type InvertedFileIndex struct {
 func NewInvertedFileIndex(numFeatures int, opts ...InvertedFileIndexOption) (*InvertedFileIndex, error) {
 	index := &InvertedFileIndex{
 		numFeatures: numFeatures,
+		isTrained:   false,
 
 		// Default values
 		numClusters:   256,
@@ -90,6 +92,7 @@ func (index *InvertedFileIndex) Train(data []float64) error {
 	}
 
 	if index.pqOptions == nil {
+		index.isTrained = true
 		return nil
 	}
 
@@ -116,11 +119,32 @@ func (index *InvertedFileIndex) Train(data []float64) error {
 	if err := eg.Wait(); err != nil {
 		return err
 	}
+	index.isTrained = true
 
 	return nil
 }
 
 func (index *InvertedFileIndex) Add(data []float64) error {
+	if len(data) == 0 {
+		return ErrEmptyData
+	}
+
+	if len(data)%index.numFeatures != 0 {
+		return ErrInvalidDataLength
+	}
+
+	if !index.isTrained {
+		return ErrNotTrained
+	}
+
+	err := index.cluster.Predict(data, func(row int, minCol int, minVal float64) error {
+		rowData := data[row*index.numFeatures : (row+1)*index.numFeatures]
+		return index.indexes[minCol].Add(rowData)
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
