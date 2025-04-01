@@ -1,6 +1,11 @@
 package annindex
 
-import "github.com/monochromegane/kmeans"
+import (
+	"runtime"
+
+	"github.com/monochromegane/kmeans"
+	"golang.org/x/sync/errgroup"
+)
 
 type InvertedFileIndex struct {
 	numFeatures    int
@@ -58,6 +63,60 @@ func NewInvertedFileIndex(numFeatures int, opts ...InvertedFileIndexOption) (*In
 }
 
 func (index *InvertedFileIndex) Train(data []float64) error {
+	if len(data) == 0 {
+		return ErrEmptyData
+	}
+
+	if len(data)%index.numFeatures != 0 {
+		return ErrInvalidDataLength
+	}
+
+	_, _, err := index.cluster.Train(data, index.numIterations, index.tol)
+	if err != nil {
+		return err
+	}
+
+	numVectors := len(data) / index.numFeatures
+
+	code := make([]int, numVectors)
+	numElements := make([]int, index.numClusters)
+	err = index.cluster.Predict(data, func(row int, minCol int, minVal float64) error {
+		code[row] = minCol
+		numElements[minCol] += 1
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if index.pqOptions == nil {
+		return nil
+	}
+
+	var eg errgroup.Group
+	eg.SetLimit(runtime.NumCPU())
+
+	for c := range index.numClusters {
+		eg.Go(func() error {
+			countClusterData := 0
+			clusterData := make([]float64, numElements[c]*index.numFeatures)
+			for v := range numVectors {
+				if code[v] != c {
+					continue
+				}
+				start := v * index.numFeatures
+				end := start + index.numFeatures
+				copy(clusterData[countClusterData*index.numFeatures:], data[start:end])
+				countClusterData += 1
+			}
+
+			return index.indexes[c].Train(clusterData)
+		})
+	}
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
