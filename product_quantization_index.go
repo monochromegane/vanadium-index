@@ -214,6 +214,10 @@ func (index *ProductQuantizationIndex) Search(query []float64, k int) ([][]int, 
 	return results, nil
 }
 
+func (index *ProductQuantizationIndex) NumVectors() int {
+	return len(index.codes[0])
+}
+
 func (index *ProductQuantizationIndex) squaredEuclideanDistance(x, y []float64) float64 {
 	distance := 0.0
 	for i := range x {

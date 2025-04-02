@@ -15,6 +15,7 @@ type InvertedFileIndex struct {
 	isTrained      bool
 	cluster        kmeans.KMeans
 	indexes        []ANNIndex
+	mapping        [][]int
 	pqNumSubspaces int
 	pqOptions      []ProductQuantizationIndexOption
 }
@@ -61,6 +62,7 @@ func NewInvertedFileIndex(numFeatures int, opts ...InvertedFileIndexOption) (*In
 			}
 		}
 	}
+	index.mapping = make([][]int, index.numClusters)
 	return index, nil
 }
 
@@ -137,8 +139,10 @@ func (index *InvertedFileIndex) Add(data []float64) error {
 		return ErrNotTrained
 	}
 
+	ivfRow := index.NumVectors()
 	err := index.cluster.Predict(data, func(row int, minCol int, minVal float64) error {
 		rowData := data[row*index.numFeatures : (row+1)*index.numFeatures]
+		index.mapping[minCol] = append(index.mapping[minCol], ivfRow)
 		return index.indexes[minCol].Add(rowData)
 	})
 	if err != nil {
@@ -149,5 +153,47 @@ func (index *InvertedFileIndex) Add(data []float64) error {
 }
 
 func (index *InvertedFileIndex) Search(query []float64, k int) ([][]int, error) {
-	return nil, nil
+	if k <= 0 {
+		return nil, ErrInvalidK
+	}
+
+	if len(query) == 0 {
+		return nil, ErrEmptyData
+	}
+
+	if len(query)%index.numFeatures != 0 {
+		return nil, ErrInvalidDataLength
+	}
+
+	if !index.isTrained {
+		return nil, ErrNotTrained
+	}
+
+	numQueries := len(query) / index.numFeatures
+	results := make([][]int, numQueries)
+	err := index.cluster.Predict(query, func(row int, minCol int, minVal float64) error {
+		rowQuery := query[row*index.numFeatures : (row+1)*index.numFeatures]
+		result, err := index.indexes[minCol].Search(rowQuery, k)
+		if err != nil {
+			return err
+		}
+		results[row] = make([]int, len(result[0]))
+		for i, r := range result[0] {
+			results[row][i] = index.mapping[minCol][r]
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+func (index *InvertedFileIndex) NumVectors() int {
+	numVectors := 0
+	for _, index := range index.indexes {
+		numVectors += index.NumVectors()
+	}
+	return numVectors
 }

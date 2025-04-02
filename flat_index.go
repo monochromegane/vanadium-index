@@ -94,6 +94,14 @@ func (index *FlatIndex) Search(query []float64, k int) ([][]int, error) {
 	return results, nil
 }
 
+func (index *FlatIndex) NumVectors() int {
+	if index.data == nil {
+		return 0
+	}
+	rows, _ := index.data.Dims()
+	return rows
+}
+
 func normVec(X *mat.Dense) *mat.VecDense {
 	N, _ := X.Dims()
 	normVec := mat.NewVecDense(N, nil)
