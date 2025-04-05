@@ -6,10 +6,15 @@ import (
 
 func TestInvertedFileIndex(t *testing.T) {
 	numFeatures := 4
-	numClusters := 4
+	numClusters := uint8(4)
 	numIterations := 10
 	tol := 0.001
-	index, err := NewInvertedFileIndex(numFeatures, WithIVFNumClusters(numClusters), WithIVFNumIterations(numIterations), WithIVFTol(tol))
+	index, err := NewInvertedFileFlatIndex(
+		numFeatures,
+		numClusters,
+		WithIVFNumIterations(numIterations),
+		WithIVFTol(tol),
+	)
 	if err != nil {
 		t.Fatalf("Failed to create index: %v", err)
 	}
@@ -48,19 +53,20 @@ func TestInvertedFileIndex(t *testing.T) {
 
 func TestInvertedFileIndexWithPQIndex(t *testing.T) {
 	numFeatures := 4
-	numClusters := 4
+	numIvfClusters := uint8(4)
+	numPqClusters := uint8(1)
 	numIterations := 10
 	tol := 0.001
 
 	numSubspaces := 1
-	index, err := NewInvertedFileIndex(
+	index, err := NewInvertedFilePQIndex(
 		numFeatures,
-		WithIVFNumClusters(numClusters),
+		numIvfClusters,
+		numSubspaces,
+		numPqClusters,
 		WithIVFNumIterations(numIterations),
 		WithIVFTol(tol),
 		WithIVFPQIndex(
-			numSubspaces,
-			WithPQNumClusters(1),
 			WithPQNumIterations(numIterations),
 			WithPQTol(tol),
 		),

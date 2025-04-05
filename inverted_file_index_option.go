@@ -1,41 +1,30 @@
 package annindex
 
-type InvertedFileIndexOption func(*InvertedFileIndex) error
-
-func WithIVFNumClusters(numClusters int) InvertedFileIndexOption {
-	return func(index *InvertedFileIndex) error {
-		if numClusters <= 0 {
-			return ErrInvalidNumClusters
-		}
-		index.numClusters = numClusters
-		return nil
-	}
-}
+type InvertedFileIndexOption func(*InvertedFileIndexConfig) error
 
 func WithIVFNumIterations(numIterations int) InvertedFileIndexOption {
-	return func(index *InvertedFileIndex) error {
+	return func(config *InvertedFileIndexConfig) error {
 		if numIterations <= 0 {
 			return ErrInvalidNumIterations
 		}
-		index.numIterations = numIterations
+		config.numIterations = numIterations
 		return nil
 	}
 }
 
 func WithIVFTol(tol float64) InvertedFileIndexOption {
-	return func(index *InvertedFileIndex) error {
+	return func(config *InvertedFileIndexConfig) error {
 		if tol <= 0 {
 			return ErrInvalidTol
 		}
-		index.tol = tol
+		config.tol = tol
 		return nil
 	}
 }
 
-func WithIVFPQIndex(numSubspaces int, opts ...ProductQuantizationIndexOption) InvertedFileIndexOption {
-	return func(index *InvertedFileIndex) error {
-		index.pqNumSubspaces = numSubspaces
-		index.pqOptions = opts
+func WithIVFPQIndex(opts ...ProductQuantizationIndexOption) InvertedFileIndexOption {
+	return func(config *InvertedFileIndexConfig) error {
+		config.pqOptions = opts
 		return nil
 	}
 }

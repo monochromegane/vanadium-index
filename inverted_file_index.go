@@ -7,66 +7,107 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type InvertedFileIndex struct {
-	numFeatures    int
-	numClusters    int
-	numIterations  int
-	tol            float64
-	isTrained      bool
-	cluster        kmeans.KMeans
-	indexes        []ANNIndex
-	mapping        [][]int
-	pqNumSubspaces int
-	pqOptions      []ProductQuantizationIndexOption
+type InvertedFileIndex[T1, T2 CodeType] struct {
+	numFeatures int
+	numClusters T1
+	config      *InvertedFileIndexConfig
+	isTrained   bool
+	cluster     kmeans.KMeans
+	indexes     []ANNIndex
+	mapping     [][]int
 }
 
-func NewInvertedFileIndex(numFeatures int, opts ...InvertedFileIndexOption) (*InvertedFileIndex, error) {
-	index := &InvertedFileIndex{
+type InvertedFileIndexConfig struct {
+	numIterations int
+	tol           float64
+	pqOptions     []ProductQuantizationIndexOption
+}
+
+func NewInvertedFileFlatIndex[T CodeType](
+	numFeatures int,
+	numClusters T,
+	opts ...InvertedFileIndexOption,
+) (*InvertedFileIndex[T, T], error) {
+	index := &InvertedFileIndex[T, T]{
 		numFeatures: numFeatures,
 		isTrained:   false,
+		numClusters: numClusters,
 
 		// Default values
-		numClusters:   256,
-		numIterations: 100,
-		tol:           1e-6,
+		config: &InvertedFileIndexConfig{
+			numIterations: 100,
+			tol:           1e-6,
+		},
 	}
 	for _, opt := range opts {
-		err := opt(index)
+		err := opt(index.config)
 		if err != nil {
 			return nil, err
 		}
 	}
+	indexBuilder := &subFlatIndexBuilder{}
+	return newInvertedFileIndex(index, indexBuilder)
+}
 
+func NewInvertedFilePQIndex[T1, T2 CodeType](
+	numFeatures int,
+	numIvfClusters T1,
+	numPqSubspaces int,
+	numPqClusters T2,
+	opts ...InvertedFileIndexOption,
+) (*InvertedFileIndex[T1, T2], error) {
+	index := &InvertedFileIndex[T1, T2]{
+		numFeatures: numFeatures,
+		isTrained:   false,
+		numClusters: numIvfClusters,
+
+		// Default values
+		config: &InvertedFileIndexConfig{
+			numIterations: 100,
+			tol:           1e-6,
+		},
+	}
+	for _, opt := range opts {
+		err := opt(index.config)
+		if err != nil {
+			return nil, err
+		}
+	}
+	indexBuilder := &subPQIndexBuilder[T2]{
+		numSubspaces: numPqSubspaces,
+		numClusters:  numPqClusters,
+		opts:         index.config.pqOptions,
+	}
+	return newInvertedFileIndex(index, indexBuilder)
+}
+
+func newInvertedFileIndex[T1, T2 CodeType](
+	index *InvertedFileIndex[T1, T2],
+	indexBuilder subIndexBuilder,
+) (*InvertedFileIndex[T1, T2], error) {
 	var err error
-	if numFeatures > 256 {
-		index.cluster, err = kmeans.NewLinearAlgebraKMeans(index.numClusters, numFeatures, kmeans.INIT_KMEANS_PLUS_PLUS)
+	if index.numFeatures > 256 {
+		index.cluster, err = kmeans.NewLinearAlgebraKMeans(int(index.numClusters), index.numFeatures, kmeans.INIT_KMEANS_PLUS_PLUS)
 	} else {
-		index.cluster, err = kmeans.NewNaiveKMeans(index.numClusters, numFeatures, kmeans.INIT_RANDOM)
+		index.cluster, err = kmeans.NewNaiveKMeans(int(index.numClusters), index.numFeatures, kmeans.INIT_RANDOM)
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	index.indexes = make([]ANNIndex, index.numClusters)
-	for c := range index.numClusters {
-		var err error
-		if index.pqOptions == nil {
-			index.indexes[c], err = NewFlatIndex(numFeatures)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			index.indexes[c], err = NewProductQuantizationIndex(numFeatures, index.pqNumSubspaces, index.pqOptions...)
-			if err != nil {
-				return nil, err
-			}
+	for c := range int(index.numClusters) {
+		subIndex, err := indexBuilder.build(index.numFeatures)
+		if err != nil {
+			return nil, err
 		}
+		index.indexes[c] = subIndex
 	}
 	index.mapping = make([][]int, index.numClusters)
 	return index, nil
 }
 
-func (index *InvertedFileIndex) Train(data []float64) error {
+func (index *InvertedFileIndex[T1, T2]) Train(data []float64) error {
 	if len(data) == 0 {
 		return ErrEmptyData
 	}
@@ -75,17 +116,17 @@ func (index *InvertedFileIndex) Train(data []float64) error {
 		return ErrInvalidDataLength
 	}
 
-	_, _, err := index.cluster.Train(data, index.numIterations, index.tol)
+	_, _, err := index.cluster.Train(data, index.config.numIterations, index.config.tol)
 	if err != nil {
 		return err
 	}
 
 	numVectors := len(data) / index.numFeatures
 
-	code := make([]int, numVectors)
-	numElements := make([]int, index.numClusters)
+	code := make([]T1, numVectors)
+	numElements := make([]int, int(index.numClusters))
 	err = index.cluster.Predict(data, func(row int, minCol int, minVal float64) error {
-		code[row] = minCol
+		code[row] = T1(minCol)
 		numElements[minCol] += 1
 		return nil
 	})
@@ -93,7 +134,7 @@ func (index *InvertedFileIndex) Train(data []float64) error {
 		return err
 	}
 
-	if index.pqOptions == nil {
+	if index.config.pqOptions == nil {
 		index.isTrained = true
 		return nil
 	}
@@ -101,12 +142,12 @@ func (index *InvertedFileIndex) Train(data []float64) error {
 	var eg errgroup.Group
 	eg.SetLimit(runtime.NumCPU())
 
-	for c := range index.numClusters {
+	for c := range int(index.numClusters) {
 		eg.Go(func() error {
 			countClusterData := 0
 			clusterData := make([]float64, numElements[c]*index.numFeatures)
 			for v := range numVectors {
-				if code[v] != c {
+				if code[v] != T1(c) {
 					continue
 				}
 				start := v * index.numFeatures
@@ -126,7 +167,7 @@ func (index *InvertedFileIndex) Train(data []float64) error {
 	return nil
 }
 
-func (index *InvertedFileIndex) Add(data []float64) error {
+func (index *InvertedFileIndex[T1, T2]) Add(data []float64) error {
 	if len(data) == 0 {
 		return ErrEmptyData
 	}
@@ -152,7 +193,7 @@ func (index *InvertedFileIndex) Add(data []float64) error {
 	return nil
 }
 
-func (index *InvertedFileIndex) Search(query []float64, k int) ([][]int, error) {
+func (index *InvertedFileIndex[T1, T2]) Search(query []float64, k int) ([][]int, error) {
 	if k <= 0 {
 		return nil, ErrInvalidK
 	}
@@ -190,10 +231,26 @@ func (index *InvertedFileIndex) Search(query []float64, k int) ([][]int, error) 
 	return results, nil
 }
 
-func (index *InvertedFileIndex) NumVectors() int {
+func (index *InvertedFileIndex[T1, T2]) NumVectors() int {
 	numVectors := 0
 	for _, index := range index.indexes {
 		numVectors += index.NumVectors()
 	}
 	return numVectors
+}
+
+type subFlatIndexBuilder struct{}
+
+func (b *subFlatIndexBuilder) build(numFeatures int) (ANNIndex, error) {
+	return NewFlatIndex(numFeatures)
+}
+
+type subPQIndexBuilder[T CodeType] struct {
+	numSubspaces int
+	numClusters  T
+	opts         []ProductQuantizationIndexOption
+}
+
+func (b *subPQIndexBuilder[T]) build(numFeatures int) (ANNIndex, error) {
+	return NewProductQuantizationIndex(numFeatures, b.numSubspaces, b.numClusters, b.opts...)
 }

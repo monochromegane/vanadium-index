@@ -6,3 +6,11 @@ type ANNIndex interface {
 	Search(query []float64, k int) ([][]int, error)
 	NumVectors() int
 }
+
+type CodeType interface {
+	~uint8 | ~uint16 | ~uint32 | ~uint64
+}
+
+type subIndexBuilder interface {
+	build(numFeatures int) (ANNIndex, error)
+}

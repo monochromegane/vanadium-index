@@ -7,20 +7,28 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type ProductQuantizationIndex struct {
+type ProductQuantizationIndex[T CodeType] struct {
 	numFeatures    int
 	numSubspaces   int
 	numSubFeatures int
-	numClusters    int
-	numIterations  int
-	tol            float64
+	numClusters    T
+	config         *ProductQuantizationIndexConfig
 	isTrained      bool
 	clusters       []kmeans.KMeans
 	codebooks      [][][]float64
-	codes          [][]int
+	codes          [][]T
 }
 
-func NewProductQuantizationIndex(numFeatures, numSubspaces int, opts ...ProductQuantizationIndexOption) (*ProductQuantizationIndex, error) {
+type ProductQuantizationIndexConfig struct {
+	numIterations int
+	tol           float64
+}
+
+func NewProductQuantizationIndex[T CodeType](
+	numFeatures, numSubspaces int,
+	numClusters T,
+	opts ...ProductQuantizationIndexOption,
+) (*ProductQuantizationIndex[T], error) {
 	if numFeatures <= 0 {
 		return nil, ErrInvalidNumFeatures
 	}
@@ -29,22 +37,28 @@ func NewProductQuantizationIndex(numFeatures, numSubspaces int, opts ...ProductQ
 	}
 	numSubFeatures := numFeatures / numSubspaces
 
-	index := &ProductQuantizationIndex{
+	if numClusters <= 0 {
+		return nil, ErrInvalidNumClusters
+	}
+
+	index := &ProductQuantizationIndex[T]{
 		numFeatures:    numFeatures,
 		numSubspaces:   numSubspaces,
 		numSubFeatures: numSubFeatures,
 		isTrained:      false,
 		codebooks:      make([][][]float64, numSubspaces),
-		codes:          make([][]int, numSubspaces),
+		codes:          make([][]T, numSubspaces),
 		clusters:       make([]kmeans.KMeans, numSubspaces),
+		numClusters:    numClusters,
 
 		// Default values
-		numClusters:   256,
-		numIterations: 100,
-		tol:           1e-6,
+		config: &ProductQuantizationIndexConfig{
+			numIterations: 100,
+			tol:           1e-6,
+		},
 	}
 	for _, opt := range opts {
-		err := opt(index)
+		err := opt(index.config)
 		if err != nil {
 			return nil, err
 		}
@@ -54,9 +68,9 @@ func NewProductQuantizationIndex(numFeatures, numSubspaces int, opts ...ProductQ
 		var err error
 		var cluster kmeans.KMeans
 		if numSubFeatures > 256 {
-			cluster, err = kmeans.NewLinearAlgebraKMeans(index.numClusters, numSubFeatures, kmeans.INIT_KMEANS_PLUS_PLUS)
+			cluster, err = kmeans.NewLinearAlgebraKMeans(int(index.numClusters), numSubFeatures, kmeans.INIT_KMEANS_PLUS_PLUS)
 		} else {
-			cluster, err = kmeans.NewNaiveKMeans(index.numClusters, numSubFeatures, kmeans.INIT_RANDOM)
+			cluster, err = kmeans.NewNaiveKMeans(int(index.numClusters), numSubFeatures, kmeans.INIT_RANDOM)
 		}
 		if err != nil {
 			return nil, err
@@ -67,7 +81,7 @@ func NewProductQuantizationIndex(numFeatures, numSubspaces int, opts ...ProductQ
 	return index, nil
 }
 
-func (index *ProductQuantizationIndex) Train(data []float64) error {
+func (index *ProductQuantizationIndex[T]) Train(data []float64) error {
 	if len(data) == 0 {
 		return ErrEmptyData
 	}
@@ -90,7 +104,7 @@ func (index *ProductQuantizationIndex) Train(data []float64) error {
 				copy(subData[v*index.numSubFeatures:], data[start:end])
 			}
 
-			_, _, err := index.clusters[i].Train(subData, index.numIterations, index.tol)
+			_, _, err := index.clusters[i].Train(subData, index.config.numIterations, index.config.tol)
 			if err != nil {
 				return err
 			}
@@ -107,7 +121,7 @@ func (index *ProductQuantizationIndex) Train(data []float64) error {
 	return nil
 }
 
-func (index *ProductQuantizationIndex) Add(data []float64) error {
+func (index *ProductQuantizationIndex[T]) Add(data []float64) error {
 	if len(data) == 0 {
 		return ErrEmptyData
 	}
@@ -132,9 +146,9 @@ func (index *ProductQuantizationIndex) Add(data []float64) error {
 				end := start + index.numSubFeatures
 				copy(subData[v*index.numSubFeatures:], data[start:end])
 			}
-			code := make([]int, numVectors)
+			code := make([]T, numVectors)
 			err := index.clusters[i].Predict(subData, func(row int, minCol int, minVal float64) error {
-				code[row] = minCol
+				code[row] = T(minCol)
 				return nil
 			})
 			if err != nil {
@@ -151,7 +165,7 @@ func (index *ProductQuantizationIndex) Add(data []float64) error {
 	return nil
 }
 
-func (index *ProductQuantizationIndex) Search(query []float64, k int) ([][]int, error) {
+func (index *ProductQuantizationIndex[T]) Search(query []float64, k int) ([][]int, error) {
 	if k <= 0 {
 		return nil, ErrInvalidK
 	}
@@ -181,8 +195,8 @@ func (index *ProductQuantizationIndex) Search(query []float64, k int) ([][]int, 
 		for m := range index.numSubspaces {
 			eg.Go(func() error {
 				subQuery := query[m*index.numSubFeatures : (m+1)*index.numSubFeatures]
-				distanceTable := make([]float64, index.numClusters)
-				for c := range index.numClusters {
+				distanceTable := make([]float64, int(index.numClusters))
+				for c := range int(index.numClusters) {
 					distanceTable[c] = index.squaredEuclideanDistance(subQuery, index.codebooks[m][c])
 				}
 				distanceTables[m] = distanceTable
@@ -214,11 +228,11 @@ func (index *ProductQuantizationIndex) Search(query []float64, k int) ([][]int, 
 	return results, nil
 }
 
-func (index *ProductQuantizationIndex) NumVectors() int {
+func (index *ProductQuantizationIndex[T]) NumVectors() int {
 	return len(index.codes[0])
 }
 
-func (index *ProductQuantizationIndex) squaredEuclideanDistance(x, y []float64) float64 {
+func (index *ProductQuantizationIndex[T]) squaredEuclideanDistance(x, y []float64) float64 {
 	distance := 0.0
 	for i := range x {
 		diff := x[i] - y[i]

@@ -7,10 +7,10 @@ import (
 func TestProductQuantizationIndex(t *testing.T) {
 	numFeatures := 4
 	numSubspaces := 2
-	numClusters := 4
+	numClusters := uint8(4)
 	numIterations := 10
 	tol := 0.001
-	index, err := NewProductQuantizationIndex(numFeatures, numSubspaces, WithPQNumClusters(numClusters), WithPQNumIterations(numIterations), WithPQTol(tol))
+	index, err := NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters, WithPQNumIterations(numIterations), WithPQTol(tol))
 	if err != nil {
 		t.Fatalf("Failed to create index: %v", err)
 	}
