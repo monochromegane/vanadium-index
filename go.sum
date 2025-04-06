@@ -1,8 +1,6 @@
-github.com/monochromegane/kmeans v0.0.0-20250311061459-4a54dec42643 h1:uXCUYHV0iUKwiAtWuGVfQH0YBIXufVcqcZkYvh6/lL8=
-github.com/monochromegane/kmeans v0.0.0-20250311061459-4a54dec42643/go.mod h1:+GHRok+NhesPTR3hsYNyvP1tGf4g7rIm8LeqE+ic0f8=
-golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa h1:FRnLl4eNAQl8hwxVVC17teOw8kdjVDVAiFMtgUdTSRQ=
-golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa/go.mod h1:zk2irFbV9DP96SEBUUAy67IdHUaZuSnrz1n472HUCLE=
+github.com/monochromegane/kmeans v0.0.0-20250406063009-daa5a5f716f9 h1:c/oZubK4bHQIMFdbuk8xiMsZD6Sm66iSx74pseUlfLE=
+github.com/monochromegane/kmeans v0.0.0-20250406063009-daa5a5f716f9/go.mod h1:+GHRok+NhesPTR3hsYNyvP1tGf4g7rIm8LeqE+ic0f8=
 golang.org/x/sync v0.12.0 h1:MHc5BpPuC30uJk597Ri8TV3CNZcTLu6B6z4lJy+g6Jw=
 golang.org/x/sync v0.12.0/go.mod h1:1dzgHSNfp02xaA81J2MS99Qcpr2w7fw1gpm99rleRqA=
-gonum.org/v1/gonum v0.15.1 h1:FNy7N6OUZVUaWG9pTiD+jlhdQ3lMP+/LcTpJ6+a8sQ0=
-gonum.org/v1/gonum v0.15.1/go.mod h1:eZTZuRFrzu5pcyjN5wJhcIhnUdNijYxX1T2IcrOGY0o=
+gonum.org/v1/gonum v0.16.0 h1:5+ul4Swaf3ESvrOnidPp4GZbzf0mxVQpDCYUQE7OJfk=
+gonum.org/v1/gonum v0.16.0/go.mod h1:fef3am4MQ93R2HHpKnLk4/Tbh/s0+wqD5nfa6Pnwy4E=
