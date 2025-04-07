@@ -197,15 +197,14 @@ func (index *ProductQuantizationIndex[T]) Search(query []float64, k int) ([][]in
 		var eg errgroup.Group
 		eg.SetLimit(runtime.NumCPU())
 
-		distanceTables := make([][]float64, index.numSubspaces)
+		distanceTable := make([]float64, index.numSubspaces*int(index.numClusters))
 		for m := range index.numSubspaces {
 			eg.Go(func() error {
 				subQuery := query[m*index.numSubFeatures : (m+1)*index.numSubFeatures]
-				distanceTable := make([]float64, int(index.numClusters))
+				offset := m * int(index.numClusters)
 				for c := range int(index.numClusters) {
-					distanceTable[c] = index.squaredEuclideanDistance(subQuery, index.codebooks[m][c])
+					distanceTable[offset+c] = index.squaredEuclideanDistance(subQuery, index.codebooks[m][c])
 				}
-				distanceTables[m] = distanceTable
 				return nil
 			})
 		}
@@ -217,7 +216,7 @@ func (index *ProductQuantizationIndex[T]) Search(query []float64, k int) ([][]in
 			distance := 0.0
 			for m := range index.numSubspaces {
 				code := index.codes[n*index.numSubspaces+m]
-				distance += distanceTables[m][code]
+				distance += distanceTable[m*int(index.numClusters)+int(code)]
 			}
 			neighbors[q].Push(n, distance)
 		}
