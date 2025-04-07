@@ -188,14 +188,21 @@ func (index *ProductQuantizationIndex[T]) Search(query []float64, k int) ([][]in
 		return nil, ErrNotTrained
 	}
 
+	type distanceItem struct {
+		index    int
+		distance float64
+	}
+	batchSize := 1000
+
 	numQueries := len(query) / index.numFeatures
 	neighbors := make([]*SmallestK, numQueries)
 	for q := range numQueries {
 		neighbors[q] = NewSmallestK(k)
 		query := query[q*index.numFeatures : (q+1)*index.numFeatures]
 
+		numWorkers := runtime.NumCPU()
 		var eg errgroup.Group
-		eg.SetLimit(runtime.NumCPU())
+		eg.SetLimit(numWorkers)
 
 		distanceTable := make([]float64, index.numSubspaces*int(index.numClusters))
 		for m := range index.numSubspaces {
@@ -212,13 +219,48 @@ func (index *ProductQuantizationIndex[T]) Search(query []float64, k int) ([][]in
 			return nil, err
 		}
 
-		for n := range index.numVectors {
-			distance := 0.0
-			for m := range index.numSubspaces {
-				code := index.codes[n*index.numSubspaces+m]
-				distance += distanceTable[m*int(index.numClusters)+int(code)]
+		chunkSize := index.numVectors / numWorkers
+		if chunkSize == 0 {
+			chunkSize = 1
+			numWorkers = index.numVectors
+		}
+		distChan := make(chan []distanceItem, numWorkers)
+
+		for w := range numWorkers {
+			start := w * chunkSize
+			end := start + chunkSize
+			if w == numWorkers-1 {
+				end = index.numVectors
 			}
-			neighbors[q].Push(n, distance)
+			eg.Go(func() error {
+				batchDistance := make([]distanceItem, 0, batchSize)
+				for n := start; n < end; n++ {
+					distance := 0.0
+					for m := range index.numSubspaces {
+						code := index.codes[n*index.numSubspaces+m]
+						distance += distanceTable[m*int(index.numClusters)+int(code)]
+					}
+					batchDistance = append(batchDistance, distanceItem{index: n, distance: distance})
+					if len(batchDistance) >= batchSize {
+						distChan <- batchDistance
+						batchDistance = make([]distanceItem, 0, batchSize)
+					}
+				}
+				if len(batchDistance) > 0 {
+					distChan <- batchDistance
+				}
+				return nil
+			})
+		}
+		go func() {
+			eg.Wait()
+			close(distChan)
+		}()
+
+		for batch := range distChan {
+			for _, item := range batch {
+				neighbors[q].Push(item.index, item.distance)
+			}
 		}
 	}
 
