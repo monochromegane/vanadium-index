@@ -70,7 +70,7 @@ func NewProductQuantizationIndex[T CodeType](
 		if numSubFeatures > 256 {
 			cluster, err = kmeans.NewLinearAlgebraKMeans(int(index.numClusters), numSubFeatures, kmeans.INIT_KMEANS_PLUS_PLUS)
 		} else {
-			cluster, err = kmeans.NewNaiveKMeans(int(index.numClusters), numSubFeatures, kmeans.INIT_RANDOM)
+			cluster, err = kmeans.NewNaiveKMeans(int(index.numClusters), numSubFeatures, kmeans.INIT_KMEANS_PLUS_PLUS)
 		}
 		if err != nil {
 			return nil, err
