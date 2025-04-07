@@ -16,7 +16,8 @@ type ProductQuantizationIndex[T CodeType] struct {
 	isTrained      bool
 	clusters       []kmeans.KMeans
 	codebooks      [][][]float64
-	codes          [][]T
+	codes          []T
+	numVectors     int
 }
 
 type ProductQuantizationIndexConfig struct {
@@ -47,7 +48,7 @@ func NewProductQuantizationIndex[T CodeType](
 		numSubFeatures: numSubFeatures,
 		isTrained:      false,
 		codebooks:      make([][][]float64, numSubspaces),
-		codes:          make([][]T, numSubspaces),
+		codes:          make([]T, numSubspaces),
 		clusters:       make([]kmeans.KMeans, numSubspaces),
 		numClusters:    numClusters,
 
@@ -133,10 +134,15 @@ func (index *ProductQuantizationIndex[T]) Add(data []float64) error {
 	if !index.isTrained {
 		return ErrNotTrained
 	}
+
 	var eg errgroup.Group
 	eg.SetLimit(runtime.NumCPU())
 
 	numVectors := len(data) / index.numFeatures
+	oldNumVectors := index.numVectors
+	newCodes := make([]T, (oldNumVectors+numVectors)*index.numSubspaces)
+	copy(newCodes, index.codes)
+	index.codes = newCodes
 
 	for i := range index.numSubspaces {
 		eg.Go(func() error {
@@ -146,15 +152,14 @@ func (index *ProductQuantizationIndex[T]) Add(data []float64) error {
 				end := start + index.numSubFeatures
 				copy(subData[v*index.numSubFeatures:], data[start:end])
 			}
-			code := make([]T, numVectors)
+
 			err := index.clusters[i].Predict(subData, func(row int, minCol int, minVal float64) error {
-				code[row] = T(minCol)
+				index.codes[(oldNumVectors+row)*index.numSubspaces+i] = T(minCol)
 				return nil
 			})
 			if err != nil {
 				return err
 			}
-			index.codes[i] = append(index.codes[i], code...)
 			return nil
 		})
 	}
@@ -162,6 +167,7 @@ func (index *ProductQuantizationIndex[T]) Add(data []float64) error {
 		return err
 	}
 
+	index.numVectors += numVectors
 	return nil
 }
 
@@ -207,11 +213,11 @@ func (index *ProductQuantizationIndex[T]) Search(query []float64, k int) ([][]in
 			return nil, err
 		}
 
-		numVectors := len(index.codes[0])
-		for n := range numVectors {
+		for n := range index.numVectors {
 			distance := 0.0
 			for m := range index.numSubspaces {
-				distance += distanceTables[m][index.codes[m][n]]
+				code := index.codes[n*index.numSubspaces+m]
+				distance += distanceTables[m][code]
 			}
 			neighbors[q].Push(n, distance)
 		}
@@ -229,7 +235,7 @@ func (index *ProductQuantizationIndex[T]) Search(query []float64, k int) ([][]in
 }
 
 func (index *ProductQuantizationIndex[T]) NumVectors() int {
-	return len(index.codes[0])
+	return index.numVectors
 }
 
 func (index *ProductQuantizationIndex[T]) squaredEuclideanDistance(x, y []float64) float64 {
