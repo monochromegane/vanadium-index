@@ -180,9 +180,10 @@ func (index *InvertedFileIndex[T1, T2]) Add(data []float64) error {
 		return ErrNotTrained
 	}
 
+	ivfRow := index.NumVectors()
 	err := index.cluster.Predict(data, func(row int, minCol int, minVal float64) error {
 		rowData := data[row*index.numFeatures : (row+1)*index.numFeatures]
-		index.mapping[minCol] = append(index.mapping[minCol], row)
+		index.mapping[minCol] = append(index.mapping[minCol], ivfRow+row)
 		return index.indexes[minCol].Add(rowData)
 	})
 	if err != nil {
