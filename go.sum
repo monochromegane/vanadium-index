@@ -1,5 +1,5 @@
-github.com/monochromegane/kmeans v0.0.0-20250407062041-27aa72c16e72 h1:5H3YBH1PxKKHbysmbgYmcR1GgN7vmA0xGIVv07IoZEI=
-github.com/monochromegane/kmeans v0.0.0-20250407062041-27aa72c16e72/go.mod h1:mLaMea32PADN36a5DWBhOKHPBIZshQP/8CroE/WKKZo=
+github.com/monochromegane/kmeans v0.0.1 h1:R5YElooS17XrOLjoKQlLM0ZRcilD/XbeU79fCkTvQW4=
+github.com/monochromegane/kmeans v0.0.1/go.mod h1:mLaMea32PADN36a5DWBhOKHPBIZshQP/8CroE/WKKZo=
 golang.org/x/sync v0.13.0 h1:AauUjRAJ9OSnvULf/ARrrVywoJDy0YS2AwQ98I37610=
 golang.org/x/sync v0.13.0/go.mod h1:1dzgHSNfp02xaA81J2MS99Qcpr2w7fw1gpm99rleRqA=
 gonum.org/v1/gonum v0.16.0 h1:5+ul4Swaf3ESvrOnidPp4GZbzf0mxVQpDCYUQE7OJfk=
