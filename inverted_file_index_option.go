@@ -7,7 +7,7 @@ func WithIVFNumIterations(numIterations int) InvertedFileIndexOption {
 		if numIterations <= 0 {
 			return ErrInvalidNumIterations
 		}
-		config.numIterations = numIterations
+		config.NumIterations = numIterations
 		return nil
 	}
 }
@@ -17,14 +17,14 @@ func WithIVFTol(tol float64) InvertedFileIndexOption {
 		if tol <= 0 {
 			return ErrInvalidTol
 		}
-		config.tol = tol
+		config.Tol = tol
 		return nil
 	}
 }
 
 func WithIVFPQIndex(opts ...ProductQuantizationIndexOption) InvertedFileIndexOption {
 	return func(config *InvertedFileIndexConfig) error {
-		config.pqOptions = opts
+		config.PqOptions = opts
 		return nil
 	}
 }

@@ -5,16 +5,24 @@ import (
 )
 
 type FlatIndex struct {
-	numFeatures int
-	data        *mat.Dense
-	xNorm       *mat.VecDense
+	state *FlatIndexState
+}
+
+type FlatIndexState struct {
+	NumFeatures int
+	Data        *mat.Dense
+	Xnorm       *mat.VecDense
 }
 
 func NewFlatIndex(numFeatures int) (*FlatIndex, error) {
 	if numFeatures <= 0 {
 		return nil, ErrInvalidNumFeatures
 	}
-	return &FlatIndex{numFeatures: numFeatures}, nil
+	return &FlatIndex{
+		state: &FlatIndexState{
+			NumFeatures: numFeatures,
+		},
+	}, nil
 }
 
 func (index *FlatIndex) Train(data []float64) error {
@@ -26,21 +34,21 @@ func (index *FlatIndex) Add(data []float64) error {
 		return ErrEmptyData
 	}
 
-	if len(data)%index.numFeatures != 0 {
+	if len(data)%index.state.NumFeatures != 0 {
 		return ErrInvalidDataLength
 	}
 
-	if index.data == nil {
-		numRows := len(data) / index.numFeatures
-		index.data = mat.NewDense(numRows, index.numFeatures, data)
+	if index.state.Data == nil {
+		numRows := len(data) / index.state.NumFeatures
+		index.state.Data = mat.NewDense(numRows, index.state.NumFeatures, data)
 	} else {
-		dataRows, _ := index.data.Dims()
-		numRows := len(data) / index.numFeatures
-		newData := mat.NewDense(dataRows+numRows, index.numFeatures, nil)
-		newData.Stack(index.data, mat.NewDense(numRows, index.numFeatures, data))
-		index.data = newData
+		dataRows, _ := index.state.Data.Dims()
+		numRows := len(data) / index.state.NumFeatures
+		newData := mat.NewDense(dataRows+numRows, index.state.NumFeatures, nil)
+		newData.Stack(index.state.Data, mat.NewDense(numRows, index.state.NumFeatures, data))
+		index.state.Data = newData
 	}
-	index.xNorm = normVec(index.data)
+	index.state.Xnorm = normVec(index.state.Data)
 	return nil
 }
 
@@ -53,20 +61,20 @@ func (index *FlatIndex) Search(query []float64, k int) ([][]int, error) {
 		return nil, ErrEmptyData
 	}
 
-	if len(query)%index.numFeatures != 0 {
+	if len(query)%index.state.NumFeatures != 0 {
 		return nil, ErrInvalidDataLength
 	}
 
-	N, _ := index.data.Dims()
-	numQueries := len(query) / index.numFeatures
+	N, _ := index.state.Data.Dims()
+	numQueries := len(query) / index.state.NumFeatures
 
-	XX := tile(N, numQueries, index.xNorm)
-	Q := mat.NewDense(numQueries, index.numFeatures, query)
+	XX := tile(N, numQueries, index.state.Xnorm)
+	Q := mat.NewDense(numQueries, index.state.NumFeatures, query)
 	qNorm := normVec(Q)
 	QQ := tile(numQueries, N, qNorm)
 
 	XQT := mat.NewDense(N, numQueries, nil)
-	XQT.Mul(index.data, Q.T())
+	XQT.Mul(index.state.Data, Q.T())
 	XQT.Scale(-2, XQT)
 
 	XQT.Add(XQT, XX)
@@ -95,10 +103,10 @@ func (index *FlatIndex) Search(query []float64, k int) ([][]int, error) {
 }
 
 func (index *FlatIndex) NumVectors() int {
-	if index.data == nil {
+	if index.state.Data == nil {
 		return 0
 	}
-	rows, _ := index.data.Dims()
+	rows, _ := index.state.Data.Dims()
 	return rows
 }
 

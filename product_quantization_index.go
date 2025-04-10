@@ -8,21 +8,25 @@ import (
 )
 
 type ProductQuantizationIndex[T CodeType] struct {
-	numFeatures    int
-	numSubspaces   int
-	numSubFeatures int
-	numClusters    T
-	config         *ProductQuantizationIndexConfig
-	isTrained      bool
-	clusters       []kmeans.KMeans
-	codebooks      [][][]float64
-	codes          []T
-	numVectors     int
+	state    *ProductQuantizationState[T]
+	clusters []kmeans.KMeans
+}
+
+type ProductQuantizationState[T CodeType] struct {
+	NumFeatures    int
+	NumSubspaces   int
+	NumSubFeatures int
+	IsTrained      bool
+	NumVectors     int
+	Config         *ProductQuantizationIndexConfig
+	NumClusters    T
+	Codebooks      [][][]float64
+	Codes          []T
 }
 
 type ProductQuantizationIndexConfig struct {
-	numIterations int
-	tol           float64
+	NumIterations int
+	Tol           float64
 }
 
 func NewProductQuantizationIndex[T CodeType](
@@ -43,35 +47,36 @@ func NewProductQuantizationIndex[T CodeType](
 	}
 
 	index := &ProductQuantizationIndex[T]{
-		numFeatures:    numFeatures,
-		numSubspaces:   numSubspaces,
-		numSubFeatures: numSubFeatures,
-		isTrained:      false,
-		codebooks:      make([][][]float64, numSubspaces),
-		codes:          make([]T, numSubspaces),
-		clusters:       make([]kmeans.KMeans, numSubspaces),
-		numClusters:    numClusters,
-
-		// Default values
-		config: &ProductQuantizationIndexConfig{
-			numIterations: 100,
-			tol:           1e-6,
+		state: &ProductQuantizationState[T]{
+			NumFeatures:    numFeatures,
+			NumSubspaces:   numSubspaces,
+			NumSubFeatures: numSubFeatures,
+			IsTrained:      false,
+			NumClusters:    numClusters,
+			Codebooks:      make([][][]float64, numSubspaces),
+			Codes:          make([]T, numSubspaces),
+			// Default values
+			Config: &ProductQuantizationIndexConfig{
+				NumIterations: 100,
+				Tol:           1e-6,
+			},
 		},
+		clusters: make([]kmeans.KMeans, numSubspaces),
 	}
 	for _, opt := range opts {
-		err := opt(index.config)
+		err := opt(index.state.Config)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	for i := range index.numSubspaces {
+	for i := range index.state.NumSubspaces {
 		var err error
 		var cluster kmeans.KMeans
 		if numSubFeatures > 256 {
-			cluster, err = kmeans.NewLinearAlgebraKMeans(int(index.numClusters), numSubFeatures, kmeans.INIT_KMEANS_PLUS_PLUS)
+			cluster, err = kmeans.NewLinearAlgebraKMeans(int(index.state.NumClusters), numSubFeatures, kmeans.INIT_KMEANS_PLUS_PLUS)
 		} else {
-			cluster, err = kmeans.NewNaiveKMeans(int(index.numClusters), numSubFeatures, kmeans.INIT_KMEANS_PLUS_PLUS)
+			cluster, err = kmeans.NewNaiveKMeans(int(index.state.NumClusters), numSubFeatures, kmeans.INIT_KMEANS_PLUS_PLUS)
 		}
 		if err != nil {
 			return nil, err
@@ -87,30 +92,30 @@ func (index *ProductQuantizationIndex[T]) Train(data []float64) error {
 		return ErrEmptyData
 	}
 
-	if len(data)%index.numFeatures != 0 {
+	if len(data)%index.state.NumFeatures != 0 {
 		return ErrInvalidDataLength
 	}
 
 	var eg errgroup.Group
 	eg.SetLimit(runtime.NumCPU())
 
-	numVectors := len(data) / index.numFeatures
+	numVectors := len(data) / index.state.NumFeatures
 
-	for i := range index.numSubspaces {
+	for i := range index.state.NumSubspaces {
 		eg.Go(func() error {
-			subData := make([]float64, numVectors*index.numSubFeatures)
+			subData := make([]float64, numVectors*index.state.NumSubFeatures)
 			for v := range numVectors {
-				start := v*index.numFeatures + i*index.numSubFeatures
-				end := start + index.numSubFeatures
-				copy(subData[v*index.numSubFeatures:], data[start:end])
+				start := v*index.state.NumFeatures + i*index.state.NumSubFeatures
+				end := start + index.state.NumSubFeatures
+				copy(subData[v*index.state.NumSubFeatures:], data[start:end])
 			}
 
-			_, _, err := index.clusters[i].Train(subData, index.config.numIterations, index.config.tol)
+			_, _, err := index.clusters[i].Train(subData, index.state.Config.NumIterations, index.state.Config.Tol)
 			if err != nil {
 				return err
 			}
 			centroids := index.clusters[i].Centroids()
-			index.codebooks[i] = centroids
+			index.state.Codebooks[i] = centroids
 			return nil
 		})
 	}
@@ -118,7 +123,7 @@ func (index *ProductQuantizationIndex[T]) Train(data []float64) error {
 		return err
 	}
 
-	index.isTrained = true
+	index.state.IsTrained = true
 	return nil
 }
 
@@ -127,34 +132,34 @@ func (index *ProductQuantizationIndex[T]) Add(data []float64) error {
 		return ErrEmptyData
 	}
 
-	if len(data)%index.numFeatures != 0 {
+	if len(data)%index.state.NumFeatures != 0 {
 		return ErrInvalidDataLength
 	}
 
-	if !index.isTrained {
+	if !index.state.IsTrained {
 		return ErrNotTrained
 	}
 
 	var eg errgroup.Group
 	eg.SetLimit(runtime.NumCPU())
 
-	numVectors := len(data) / index.numFeatures
-	oldNumVectors := index.numVectors
-	newCodes := make([]T, (oldNumVectors+numVectors)*index.numSubspaces)
-	copy(newCodes, index.codes)
-	index.codes = newCodes
+	numVectors := len(data) / index.state.NumFeatures
+	oldNumVectors := index.state.NumVectors
+	newCodes := make([]T, (oldNumVectors+numVectors)*index.state.NumSubspaces)
+	copy(newCodes, index.state.Codes)
+	index.state.Codes = newCodes
 
-	for i := range index.numSubspaces {
+	for i := range index.state.NumSubspaces {
 		eg.Go(func() error {
-			subData := make([]float64, numVectors*index.numSubFeatures)
+			subData := make([]float64, numVectors*index.state.NumSubFeatures)
 			for v := range numVectors {
-				start := v*index.numFeatures + i*index.numSubFeatures
-				end := start + index.numSubFeatures
-				copy(subData[v*index.numSubFeatures:], data[start:end])
+				start := v*index.state.NumFeatures + i*index.state.NumSubFeatures
+				end := start + index.state.NumSubFeatures
+				copy(subData[v*index.state.NumSubFeatures:], data[start:end])
 			}
 
 			err := index.clusters[i].Predict(subData, func(row int, minCol int, minVal float64) error {
-				index.codes[(oldNumVectors+row)*index.numSubspaces+i] = T(minCol)
+				index.state.Codes[(oldNumVectors+row)*index.state.NumSubspaces+i] = T(minCol)
 				return nil
 			})
 			if err != nil {
@@ -167,7 +172,7 @@ func (index *ProductQuantizationIndex[T]) Add(data []float64) error {
 		return err
 	}
 
-	index.numVectors += numVectors
+	index.state.NumVectors += numVectors
 	return nil
 }
 
@@ -180,11 +185,11 @@ func (index *ProductQuantizationIndex[T]) Search(query []float64, k int) ([][]in
 		return nil, ErrEmptyData
 	}
 
-	if len(query)%index.numFeatures != 0 {
+	if len(query)%index.state.NumFeatures != 0 {
 		return nil, ErrInvalidDataLength
 	}
 
-	if !index.isTrained {
+	if !index.state.IsTrained {
 		return nil, ErrNotTrained
 	}
 
@@ -194,23 +199,23 @@ func (index *ProductQuantizationIndex[T]) Search(query []float64, k int) ([][]in
 	}
 	batchSize := 1000
 
-	numQueries := len(query) / index.numFeatures
+	numQueries := len(query) / index.state.NumFeatures
 	neighbors := make([]*SmallestK, numQueries)
 	for q := range numQueries {
 		neighbors[q] = NewSmallestK(k)
-		query := query[q*index.numFeatures : (q+1)*index.numFeatures]
+		query := query[q*index.state.NumFeatures : (q+1)*index.state.NumFeatures]
 
 		numWorkers := runtime.NumCPU()
 		var eg errgroup.Group
 		eg.SetLimit(numWorkers)
 
-		distanceTable := make([]float64, index.numSubspaces*int(index.numClusters))
-		for m := range index.numSubspaces {
+		distanceTable := make([]float64, index.state.NumSubspaces*int(index.state.NumClusters))
+		for m := range index.state.NumSubspaces {
 			eg.Go(func() error {
-				subQuery := query[m*index.numSubFeatures : (m+1)*index.numSubFeatures]
-				offset := m * int(index.numClusters)
-				for c := range int(index.numClusters) {
-					distanceTable[offset+c] = index.squaredEuclideanDistance(subQuery, index.codebooks[m][c])
+				subQuery := query[m*index.state.NumSubFeatures : (m+1)*index.state.NumSubFeatures]
+				offset := m * int(index.state.NumClusters)
+				for c := range int(index.state.NumClusters) {
+					distanceTable[offset+c] = index.squaredEuclideanDistance(subQuery, index.state.Codebooks[m][c])
 				}
 				return nil
 			})
@@ -219,10 +224,10 @@ func (index *ProductQuantizationIndex[T]) Search(query []float64, k int) ([][]in
 			return nil, err
 		}
 
-		chunkSize := index.numVectors / numWorkers
+		chunkSize := index.state.NumVectors / numWorkers
 		if chunkSize == 0 {
 			chunkSize = 1
-			numWorkers = index.numVectors
+			numWorkers = index.state.NumVectors
 		}
 		distChan := make(chan []distanceItem, numWorkers)
 
@@ -230,15 +235,15 @@ func (index *ProductQuantizationIndex[T]) Search(query []float64, k int) ([][]in
 			start := w * chunkSize
 			end := start + chunkSize
 			if w == numWorkers-1 {
-				end = index.numVectors
+				end = index.state.NumVectors
 			}
 			eg.Go(func() error {
 				batchDistance := make([]distanceItem, 0, batchSize)
 				for n := start; n < end; n++ {
 					distance := 0.0
-					for m := range index.numSubspaces {
-						code := index.codes[n*index.numSubspaces+m]
-						distance += distanceTable[m*int(index.numClusters)+int(code)]
+					for m := range index.state.NumSubspaces {
+						code := index.state.Codes[n*index.state.NumSubspaces+m]
+						distance += distanceTable[m*int(index.state.NumClusters)+int(code)]
 					}
 					batchDistance = append(batchDistance, distanceItem{index: n, distance: distance})
 					if len(batchDistance) >= batchSize {
@@ -276,7 +281,7 @@ func (index *ProductQuantizationIndex[T]) Search(query []float64, k int) ([][]in
 }
 
 func (index *ProductQuantizationIndex[T]) NumVectors() int {
-	return index.numVectors
+	return index.state.NumVectors
 }
 
 func (index *ProductQuantizationIndex[T]) squaredEuclideanDistance(x, y []float64) float64 {

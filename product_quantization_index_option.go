@@ -4,14 +4,14 @@ type ProductQuantizationIndexOption func(*ProductQuantizationIndexConfig) error
 
 func WithPQNumIterations(numIterations int) ProductQuantizationIndexOption {
 	return func(config *ProductQuantizationIndexConfig) error {
-		config.numIterations = numIterations
+		config.NumIterations = numIterations
 		return nil
 	}
 }
 
 func WithPQTol(tol float64) ProductQuantizationIndexOption {
 	return func(config *ProductQuantizationIndexConfig) error {
-		config.tol = tol
+		config.Tol = tol
 		return nil
 	}
 }
