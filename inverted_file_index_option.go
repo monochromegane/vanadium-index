@@ -1,9 +1,9 @@
 package annindex
 
-type InvertedFileIndexOption func(*InvertedFileIndexConfig) error
+type InvertedFileIndexOption func(*InvertedFileIndexConfig, []ProductQuantizationIndexOption) error
 
 func WithIVFNumIterations(numIterations int) InvertedFileIndexOption {
-	return func(config *InvertedFileIndexConfig) error {
+	return func(config *InvertedFileIndexConfig, _ []ProductQuantizationIndexOption) error {
 		if numIterations <= 0 {
 			return ErrInvalidNumIterations
 		}
@@ -13,7 +13,7 @@ func WithIVFNumIterations(numIterations int) InvertedFileIndexOption {
 }
 
 func WithIVFTol(tol float64) InvertedFileIndexOption {
-	return func(config *InvertedFileIndexConfig) error {
+	return func(config *InvertedFileIndexConfig, _ []ProductQuantizationIndexOption) error {
 		if tol <= 0 {
 			return ErrInvalidTol
 		}
@@ -23,8 +23,11 @@ func WithIVFTol(tol float64) InvertedFileIndexOption {
 }
 
 func WithIVFPQIndex(opts ...ProductQuantizationIndexOption) InvertedFileIndexOption {
-	return func(config *InvertedFileIndexConfig) error {
-		config.PqOptions = opts
+	return func(config *InvertedFileIndexConfig, pqOpts []ProductQuantizationIndexOption) error {
+		if pqOpts == nil {
+			return ErrInvalidPQOptions
+		}
+		pqOpts = append(pqOpts, opts...)
 		return nil
 	}
 }

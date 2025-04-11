@@ -1,6 +1,8 @@
 package annindex
 
 import (
+	"encoding/gob"
+
 	"gonum.org/v1/gonum/mat"
 )
 
@@ -23,6 +25,15 @@ func NewFlatIndex(numFeatures int) (*FlatIndex, error) {
 			NumFeatures: numFeatures,
 		},
 	}, nil
+}
+
+func LoadFlatIndex(dec *gob.Decoder) (*FlatIndex, error) {
+	index := &FlatIndex{}
+	err := index.Decode(dec)
+	if err != nil {
+		return nil, err
+	}
+	return index, nil
 }
 
 func (index *FlatIndex) Train(data []float64) error {
@@ -108,6 +119,15 @@ func (index *FlatIndex) NumVectors() int {
 	}
 	rows, _ := index.state.Data.Dims()
 	return rows
+}
+
+func (index *FlatIndex) Encode(enc *gob.Encoder) error {
+	return enc.Encode(index.state)
+}
+
+func (index *FlatIndex) Decode(dec *gob.Decoder) error {
+	index.state = &FlatIndexState{}
+	return dec.Decode(index.state)
 }
 
 func normVec(X *mat.Dense) *mat.VecDense {

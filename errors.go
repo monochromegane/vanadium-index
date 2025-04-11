@@ -18,4 +18,6 @@ var ErrInvalidNumIterations = fmt.Errorf("number of iterations must be greater t
 
 var ErrInvalidTol = fmt.Errorf("tolerance must be greater than 0")
 
+var ErrInvalidPQOptions = fmt.Errorf("pq options can use only in ProductQuantizationIndex")
+
 var ErrNotTrained = fmt.Errorf("index is not trained")

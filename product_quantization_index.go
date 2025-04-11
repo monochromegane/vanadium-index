@@ -1,6 +1,7 @@
 package annindex
 
 import (
+	"encoding/gob"
 	"runtime"
 
 	"github.com/monochromegane/kmeans"
@@ -84,6 +85,15 @@ func NewProductQuantizationIndex[T CodeType](
 		index.clusters[i] = cluster
 	}
 
+	return index, nil
+}
+
+func LoadProductQuantizationIndex[T CodeType](dec *gob.Decoder) (*ProductQuantizationIndex[T], error) {
+	index := &ProductQuantizationIndex[T]{}
+	err := index.Decode(dec)
+	if err != nil {
+		return nil, err
+	}
 	return index, nil
 }
 
@@ -282,6 +292,48 @@ func (index *ProductQuantizationIndex[T]) Search(query []float64, k int) ([][]in
 
 func (index *ProductQuantizationIndex[T]) NumVectors() int {
 	return index.state.NumVectors
+}
+
+func (index *ProductQuantizationIndex[T]) Encode(enc *gob.Encoder) error {
+	err := enc.Encode(index.state)
+	if err != nil {
+		return err
+	}
+	for _, cluster := range index.clusters {
+		err = cluster.Encode(enc)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (index *ProductQuantizationIndex[T]) Decode(dec *gob.Decoder) error {
+	index.state = &ProductQuantizationState[T]{
+		Config: &ProductQuantizationIndexConfig{},
+	}
+	err := dec.Decode(index.state)
+	if err != nil {
+		return err
+	}
+
+	numSubspaces := index.state.NumSubspaces
+	clusters := make([]kmeans.KMeans, numSubspaces)
+	for i := range numSubspaces {
+		var err error
+		var cluster kmeans.KMeans
+		if index.state.NumSubFeatures > 256 {
+			cluster, err = kmeans.LoadLinearAlgebraKMeans(dec)
+		} else {
+			cluster, err = kmeans.LoadNaiveKMeans(dec)
+		}
+		if err != nil {
+			return err
+		}
+		clusters[i] = cluster
+	}
+	index.clusters = clusters
+	return nil
 }
 
 func (index *ProductQuantizationIndex[T]) squaredEuclideanDistance(x, y []float64) float64 {

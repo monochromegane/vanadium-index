@@ -1,6 +1,7 @@
 package annindex
 
 import (
+	"encoding/gob"
 	"runtime"
 
 	"github.com/monochromegane/kmeans"
@@ -14,17 +15,17 @@ type InvertedFileIndex[T1, T2 CodeType] struct {
 }
 
 type InvertedFileIndexState[T1, T2 CodeType] struct {
-	NumFeatures int
-	NumClusters T1
-	IsTrained   bool
-	Config      *InvertedFileIndexConfig
-	Mapping     [][]int
+	NumFeatures        int
+	NumClusters        T1
+	IsTrained          bool
+	ShouldTrainIndexes bool
+	Config             *InvertedFileIndexConfig
+	Mapping            [][]int
 }
 
 type InvertedFileIndexConfig struct {
 	NumIterations int
 	Tol           float64
-	PqOptions     []ProductQuantizationIndexOption
 }
 
 func NewInvertedFileFlatIndex[T CodeType](
@@ -34,9 +35,10 @@ func NewInvertedFileFlatIndex[T CodeType](
 ) (*InvertedFileIndex[T, T], error) {
 	index := &InvertedFileIndex[T, T]{
 		state: &InvertedFileIndexState[T, T]{
-			NumFeatures: numFeatures,
-			NumClusters: numClusters,
-			IsTrained:   false,
+			NumFeatures:        numFeatures,
+			NumClusters:        numClusters,
+			IsTrained:          false,
+			ShouldTrainIndexes: false,
 			// Default values
 			Config: &InvertedFileIndexConfig{
 				NumIterations: 100,
@@ -44,14 +46,24 @@ func NewInvertedFileFlatIndex[T CodeType](
 			},
 		},
 	}
+
 	for _, opt := range opts {
-		err := opt(index.state.Config)
+		err := opt(index.state.Config, nil)
 		if err != nil {
 			return nil, err
 		}
 	}
 	indexBuilder := &subFlatIndexBuilder{}
 	return newInvertedFileIndex(index, indexBuilder)
+}
+
+func LoadInvertedFileFlatIndex[T CodeType](dec *gob.Decoder) (*InvertedFileIndex[T, T], error) {
+	index := &InvertedFileIndex[T, T]{}
+	err := index.Decode(dec)
+	if err != nil {
+		return nil, err
+	}
+	return index, nil
 }
 
 func NewInvertedFilePQIndex[T1, T2 CodeType](
@@ -63,9 +75,10 @@ func NewInvertedFilePQIndex[T1, T2 CodeType](
 ) (*InvertedFileIndex[T1, T2], error) {
 	index := &InvertedFileIndex[T1, T2]{
 		state: &InvertedFileIndexState[T1, T2]{
-			NumFeatures: numFeatures,
-			NumClusters: numIvfClusters,
-			IsTrained:   false,
+			NumFeatures:        numFeatures,
+			NumClusters:        numIvfClusters,
+			IsTrained:          false,
+			ShouldTrainIndexes: true,
 			// Default values
 			Config: &InvertedFileIndexConfig{
 				NumIterations: 100,
@@ -73,8 +86,10 @@ func NewInvertedFilePQIndex[T1, T2 CodeType](
 			},
 		},
 	}
+
+	pqOpts := []ProductQuantizationIndexOption{}
 	for _, opt := range opts {
-		err := opt(index.state.Config)
+		err := opt(index.state.Config, pqOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -82,9 +97,18 @@ func NewInvertedFilePQIndex[T1, T2 CodeType](
 	indexBuilder := &subPQIndexBuilder[T2]{
 		numSubspaces: numPqSubspaces,
 		numClusters:  numPqClusters,
-		opts:         index.state.Config.PqOptions,
+		opts:         pqOpts,
 	}
 	return newInvertedFileIndex(index, indexBuilder)
+}
+
+func LoadInvertedFilePQIndex[T1, T2 CodeType](dec *gob.Decoder) (*InvertedFileIndex[T1, T2], error) {
+	index := &InvertedFileIndex[T1, T2]{}
+	err := index.Decode(dec)
+	if err != nil {
+		return nil, err
+	}
+	return index, nil
 }
 
 func newInvertedFileIndex[T1, T2 CodeType](
@@ -140,7 +164,7 @@ func (index *InvertedFileIndex[T1, T2]) Train(data []float64) error {
 		return err
 	}
 
-	if index.state.Config.PqOptions == nil {
+	if !index.state.ShouldTrainIndexes {
 		index.state.IsTrained = true
 		return nil
 	}
@@ -243,6 +267,59 @@ func (index *InvertedFileIndex[T1, T2]) NumVectors() int {
 		numVectors += index.NumVectors()
 	}
 	return numVectors
+}
+
+func (index *InvertedFileIndex[T1, T2]) Encode(enc *gob.Encoder) error {
+	err := enc.Encode(index.state)
+	if err != nil {
+		return err
+	}
+	err = index.cluster.Encode(enc)
+	if err != nil {
+		return err
+	}
+	for _, index := range index.indexes {
+		err = index.Encode(enc)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (index *InvertedFileIndex[T1, T2]) Decode(dec *gob.Decoder) error {
+	index.state = &InvertedFileIndexState[T1, T2]{
+		Config: &InvertedFileIndexConfig{},
+	}
+	err := dec.Decode(index.state)
+	if err != nil {
+		return err
+	}
+
+	var cluster kmeans.KMeans
+	if index.state.NumFeatures > 256 {
+		cluster, err = kmeans.LoadLinearAlgebraKMeans(dec)
+	} else {
+		cluster, err = kmeans.LoadNaiveKMeans(dec)
+	}
+	if err != nil {
+		return err
+	}
+	index.cluster = cluster
+
+	index.indexes = make([]ANNIndex, index.state.NumClusters)
+	for i := range int(index.state.NumClusters) {
+		if index.state.ShouldTrainIndexes {
+			index.indexes[i], err = LoadProductQuantizationIndex[T2](dec)
+		} else {
+			index.indexes[i], err = LoadFlatIndex(dec)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type subFlatIndexBuilder struct{}
