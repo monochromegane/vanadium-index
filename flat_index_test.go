@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestFlatIndexAdd(t *testing.T) {
+func TestFlatIndexSearch(t *testing.T) {
 	index, _ := NewFlatIndex(2)
 	index.Add([]float32{1, 2, 3, 4})
 	index.Add([]float32{5, 6})
@@ -52,13 +52,9 @@ func TestFlatIndexEncodeDecode(t *testing.T) {
 
 	for i := range numVectors {
 		for j := range numFeatures {
-			if index.state.Data.At(i, j) != index2.state.Data.At(i, j) {
-				t.Fatalf("data mismatch: %v != %v", index.state.Data.At(i, j), index2.state.Data.At(i, j))
+			if index.state.Data[i*numFeatures+j] != index2.state.Data[i*numFeatures+j] {
+				t.Fatalf("data mismatch: %v != %v", index.state.Data[i*numFeatures+j], index2.state.Data[i*numFeatures+j])
 			}
-		}
-
-		if index.state.Xnorm.AtVec(i) != index2.state.Xnorm.AtVec(i) {
-			t.Fatalf("xnorm mismatch: %v != %v", index.state.Xnorm.AtVec(i), index2.state.Xnorm.AtVec(i))
 		}
 	}
 }

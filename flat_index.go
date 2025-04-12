@@ -2,8 +2,6 @@ package annindex
 
 import (
 	"encoding/gob"
-
-	"gonum.org/v1/gonum/mat"
 )
 
 type FlatIndex struct {
@@ -12,8 +10,7 @@ type FlatIndex struct {
 
 type FlatIndexState struct {
 	NumFeatures int
-	Data        *mat.Dense
-	Xnorm       *mat.VecDense
+	Data        []float32
 }
 
 func NewFlatIndex(numFeatures int) (*FlatIndex, error) {
@@ -23,6 +20,7 @@ func NewFlatIndex(numFeatures int) (*FlatIndex, error) {
 	return &FlatIndex{
 		state: &FlatIndexState{
 			NumFeatures: numFeatures,
+			Data:        make([]float32, 0),
 		},
 	}, nil
 }
@@ -48,22 +46,8 @@ func (index *FlatIndex) Add(data []float32) error {
 	if len(data)%index.state.NumFeatures != 0 {
 		return ErrInvalidDataLength
 	}
-	data64 := make([]float64, len(data))
-	for i, v := range data {
-		data64[i] = float64(v)
-	}
 
-	if index.state.Data == nil {
-		numRows := len(data) / index.state.NumFeatures
-		index.state.Data = mat.NewDense(numRows, index.state.NumFeatures, data64)
-	} else {
-		dataRows, _ := index.state.Data.Dims()
-		numRows := len(data) / index.state.NumFeatures
-		newData := mat.NewDense(dataRows+numRows, index.state.NumFeatures, nil)
-		newData.Stack(index.state.Data, mat.NewDense(numRows, index.state.NumFeatures, data64))
-		index.state.Data = newData
-	}
-	index.state.Xnorm = normVec(index.state.Data)
+	index.state.Data = append(index.state.Data, data...)
 	return nil
 }
 
@@ -80,34 +64,17 @@ func (index *FlatIndex) Search(query []float32, k int) ([][]int, error) {
 		return nil, ErrInvalidDataLength
 	}
 
-	query64 := make([]float64, len(query))
-	for i, v := range query {
-		query64[i] = float64(v)
-	}
-
-	N, _ := index.state.Data.Dims()
+	N := len(index.state.Data) / index.state.NumFeatures
 	numQueries := len(query) / index.state.NumFeatures
-
-	XX := tile(N, numQueries, index.state.Xnorm)
-	Q := mat.NewDense(numQueries, index.state.NumFeatures, query64)
-	qNorm := normVec(Q)
-	QQ := tile(numQueries, N, qNorm)
-
-	XQT := mat.NewDense(N, numQueries, nil)
-	XQT.Mul(index.state.Data, Q.T())
-	XQT.Scale(-2, XQT)
-
-	XQT.Add(XQT, XX)
-	XQT.Add(XQT, QQ.T())
 
 	neighbors := make([]*SmallestK, numQueries)
 	for q := range numQueries {
 		neighbors[q] = NewSmallestK(k)
-	}
-	for n := range N {
-		for q := range numQueries {
-			dist := XQT.At(n, q)
-			neighbors[q].Push(n, float32(dist))
+		for n := range N {
+			subData := index.state.Data[n*index.state.NumFeatures : (n+1)*index.state.NumFeatures]
+			subQuery := query[q*index.state.NumFeatures : (q+1)*index.state.NumFeatures]
+			dist := index.squaredEuclideanDistance(subQuery, subData)
+			neighbors[q].Push(n, dist)
 		}
 	}
 
@@ -123,11 +90,7 @@ func (index *FlatIndex) Search(query []float32, k int) ([][]int, error) {
 }
 
 func (index *FlatIndex) NumVectors() int {
-	if index.state.Data == nil {
-		return 0
-	}
-	rows, _ := index.state.Data.Dims()
-	return rows
+	return len(index.state.Data) / index.state.NumFeatures
 }
 
 func (index *FlatIndex) Encode(enc *gob.Encoder) error {
@@ -139,20 +102,11 @@ func (index *FlatIndex) Decode(dec *gob.Decoder) error {
 	return dec.Decode(index.state)
 }
 
-func normVec(X *mat.Dense) *mat.VecDense {
-	N, _ := X.Dims()
-	normVec := mat.NewVecDense(N, nil)
-	for i := range N {
-		normVec.SetVec(i, mat.Norm(X.RowView(i), 2))
+func (index *FlatIndex) squaredEuclideanDistance(x, y []float32) float32 {
+	distance := float32(0)
+	for i := range x {
+		diff := x[i] - y[i]
+		distance += diff * diff
 	}
-	normVec.MulElemVec(normVec, normVec)
-	return normVec
-}
-
-func tile(r, c int, x *mat.VecDense) *mat.Dense {
-	X := mat.NewDense(r, c, nil)
-	for i := range c {
-		X.SetCol(i, x.RawVector().Data)
-	}
-	return X
+	return distance
 }
