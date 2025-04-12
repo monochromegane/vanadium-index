@@ -8,10 +8,10 @@ import (
 
 func TestFlatIndexAdd(t *testing.T) {
 	index, _ := NewFlatIndex(2)
-	index.Add([]float64{1, 2, 3, 4})
-	index.Add([]float64{5, 6})
+	index.Add([]float32{1, 2, 3, 4})
+	index.Add([]float32{5, 6})
 
-	results, err := index.Search([]float64{1, 2, 3, 4, 5, 6}, 1)
+	results, err := index.Search([]float32{1, 2, 3, 4, 5, 6}, 1)
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
@@ -24,8 +24,8 @@ func TestFlatIndexAdd(t *testing.T) {
 
 func TestFlatIndexEncodeDecode(t *testing.T) {
 	index, _ := NewFlatIndex(2)
-	index.Add([]float64{1, 2, 3, 4})
-	index.Add([]float64{5, 6})
+	index.Add([]float32{1, 2, 3, 4})
+	index.Add([]float32{5, 6})
 
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)

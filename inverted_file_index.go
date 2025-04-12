@@ -10,7 +10,7 @@ import (
 
 type InvertedFileIndex[T1, T2 CodeType] struct {
 	state   *InvertedFileIndexState[T1, T2]
-	cluster kmeans.KMeans
+	cluster *kmeans.KMeans
 	indexes []ANNIndex
 }
 
@@ -24,8 +24,8 @@ type InvertedFileIndexState[T1, T2 CodeType] struct {
 }
 
 type InvertedFileIndexConfig struct {
-	NumIterations int
-	Tol           float64
+	MaxIterations int
+	Tolerance     float32
 }
 
 func NewInvertedFileFlatIndex[T CodeType](
@@ -41,8 +41,8 @@ func NewInvertedFileFlatIndex[T CodeType](
 			ShouldTrainIndexes: false,
 			// Default values
 			Config: &InvertedFileIndexConfig{
-				NumIterations: 100,
-				Tol:           1e-6,
+				MaxIterations: 100,
+				Tolerance:     1e-4,
 			},
 		},
 	}
@@ -81,8 +81,8 @@ func NewInvertedFilePQIndex[T1, T2 CodeType](
 			ShouldTrainIndexes: true,
 			// Default values
 			Config: &InvertedFileIndexConfig{
-				NumIterations: 100,
-				Tol:           1e-6,
+				MaxIterations: 100,
+				Tolerance:     1e-4,
 			},
 		},
 	}
@@ -115,15 +115,15 @@ func newInvertedFileIndex[T1, T2 CodeType](
 	index *InvertedFileIndex[T1, T2],
 	indexBuilder subIndexBuilder,
 ) (*InvertedFileIndex[T1, T2], error) {
-	var err error
-	if index.state.NumFeatures > 256 {
-		index.cluster, err = kmeans.NewLinearAlgebraKMeans(int(index.state.NumClusters), index.state.NumFeatures, kmeans.INIT_KMEANS_PLUS_PLUS)
-	} else {
-		index.cluster, err = kmeans.NewNaiveKMeans(int(index.state.NumClusters), index.state.NumFeatures, kmeans.INIT_RANDOM)
-	}
+	cluster, err := kmeans.NewKMeans(
+		int(index.state.NumClusters),
+		index.state.NumFeatures,
+		kmeans.WithInitMethod(kmeans.INIT_KMEANS_PLUS_PLUS),
+	)
 	if err != nil {
 		return nil, err
 	}
+	index.cluster = cluster
 
 	index.indexes = make([]ANNIndex, index.state.NumClusters)
 	for c := range int(index.state.NumClusters) {
@@ -137,7 +137,7 @@ func newInvertedFileIndex[T1, T2 CodeType](
 	return index, nil
 }
 
-func (index *InvertedFileIndex[T1, T2]) Train(data []float64) error {
+func (index *InvertedFileIndex[T1, T2]) Train(data []float32) error {
 	if len(data) == 0 {
 		return ErrEmptyData
 	}
@@ -146,7 +146,11 @@ func (index *InvertedFileIndex[T1, T2]) Train(data []float64) error {
 		return ErrInvalidDataLength
 	}
 
-	_, _, err := index.cluster.Train(data, index.state.Config.NumIterations, index.state.Config.Tol)
+	_, _, err := index.cluster.Train(
+		data,
+		kmeans.WithMaxIterations(index.state.Config.MaxIterations),
+		kmeans.WithTolerance(index.state.Config.Tolerance),
+	)
 	if err != nil {
 		return err
 	}
@@ -155,7 +159,7 @@ func (index *InvertedFileIndex[T1, T2]) Train(data []float64) error {
 
 	code := make([]T1, numVectors)
 	numElements := make([]int, int(index.state.NumClusters))
-	err = index.cluster.Predict(data, func(row int, minCol int, minVal float64) error {
+	err = index.cluster.Predict(data, func(row int, minCol int, minVal float32) error {
 		code[row] = T1(minCol)
 		numElements[minCol] += 1
 		return nil
@@ -175,7 +179,7 @@ func (index *InvertedFileIndex[T1, T2]) Train(data []float64) error {
 	for c := range int(index.state.NumClusters) {
 		eg.Go(func() error {
 			countClusterData := 0
-			clusterData := make([]float64, numElements[c]*index.state.NumFeatures)
+			clusterData := make([]float32, numElements[c]*index.state.NumFeatures)
 			for v := range numVectors {
 				if code[v] != T1(c) {
 					continue
@@ -197,7 +201,7 @@ func (index *InvertedFileIndex[T1, T2]) Train(data []float64) error {
 	return nil
 }
 
-func (index *InvertedFileIndex[T1, T2]) Add(data []float64) error {
+func (index *InvertedFileIndex[T1, T2]) Add(data []float32) error {
 	if len(data) == 0 {
 		return ErrEmptyData
 	}
@@ -211,7 +215,7 @@ func (index *InvertedFileIndex[T1, T2]) Add(data []float64) error {
 	}
 
 	ivfRow := index.NumVectors()
-	err := index.cluster.Predict(data, func(row int, minCol int, minVal float64) error {
+	err := index.cluster.Predict(data, func(row int, minCol int, minVal float32) error {
 		rowData := data[row*index.state.NumFeatures : (row+1)*index.state.NumFeatures]
 		index.state.Mapping[minCol] = append(index.state.Mapping[minCol], ivfRow+row)
 		return index.indexes[minCol].Add(rowData)
@@ -223,7 +227,7 @@ func (index *InvertedFileIndex[T1, T2]) Add(data []float64) error {
 	return nil
 }
 
-func (index *InvertedFileIndex[T1, T2]) Search(query []float64, k int) ([][]int, error) {
+func (index *InvertedFileIndex[T1, T2]) Search(query []float32, k int) ([][]int, error) {
 	if k <= 0 {
 		return nil, ErrInvalidK
 	}
@@ -242,7 +246,7 @@ func (index *InvertedFileIndex[T1, T2]) Search(query []float64, k int) ([][]int,
 
 	numQueries := len(query) / index.state.NumFeatures
 	results := make([][]int, numQueries)
-	err := index.cluster.Predict(query, func(row int, minCol int, minVal float64) error {
+	err := index.cluster.Predict(query, func(row int, minCol int, minVal float32) error {
 		rowQuery := query[row*index.state.NumFeatures : (row+1)*index.state.NumFeatures]
 		result, err := index.indexes[minCol].Search(rowQuery, k)
 		if err != nil {
@@ -296,12 +300,7 @@ func (index *InvertedFileIndex[T1, T2]) Decode(dec *gob.Decoder) error {
 		return err
 	}
 
-	var cluster kmeans.KMeans
-	if index.state.NumFeatures > 256 {
-		cluster, err = kmeans.LoadLinearAlgebraKMeans(dec)
-	} else {
-		cluster, err = kmeans.LoadNaiveKMeans(dec)
-	}
+	cluster, err := kmeans.LoadKMeans(dec)
 	if err != nil {
 		return err
 	}

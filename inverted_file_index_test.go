@@ -10,17 +10,17 @@ func TestInvertedFileIndex(t *testing.T) {
 	numFeatures := 4
 	numClusters := uint8(4)
 	numIterations := 10
-	tol := 0.001
+	tol := float32(0.001)
 	index, err := NewInvertedFileFlatIndex(
 		numFeatures,
 		numClusters,
-		WithIVFNumIterations(numIterations),
-		WithIVFTol(tol),
+		WithIVFMaxIterations(numIterations),
+		WithIVFTolerance(tol),
 	)
 	if err != nil {
 		t.Fatalf("Failed to create index: %v", err)
 	}
-	data := []float64{
+	data := []float32{
 		0.1, 0.2, 0.3, 0.4,
 		0.5, 0.6, 0.7, 0.8,
 		0.9, 1.0, 1.1, 1.2,
@@ -57,17 +57,17 @@ func TestInvertedFileIndexEncodeDecode(t *testing.T) {
 	numFeatures := 4
 	numClusters := uint8(4)
 	numIterations := 10
-	tol := 0.001
+	tol := float32(0.001)
 	index, err := NewInvertedFileFlatIndex(
 		numFeatures,
 		numClusters,
-		WithIVFNumIterations(numIterations),
-		WithIVFTol(tol),
+		WithIVFMaxIterations(numIterations),
+		WithIVFTolerance(tol),
 	)
 	if err != nil {
 		t.Fatalf("Failed to create index: %v", err)
 	}
-	data := []float64{
+	data := []float32{
 		0.1, 0.2, 0.3, 0.4,
 		0.5, 0.6, 0.7, 0.8,
 		0.9, 1.0, 1.1, 1.2,
@@ -115,12 +115,12 @@ func TestInvertedFileIndexEncodeDecode(t *testing.T) {
 		t.Fatalf("index2.state.ShouldTrainIndexes = %t, expected %t", index2.state.ShouldTrainIndexes, index.state.ShouldTrainIndexes)
 	}
 
-	if index2.state.Config.NumIterations != index.state.Config.NumIterations {
-		t.Fatalf("index2.state.Config.NumIterations = %d, expected %d", index2.state.Config.NumIterations, index.state.Config.NumIterations)
+	if index2.state.Config.MaxIterations != index.state.Config.MaxIterations {
+		t.Fatalf("index2.state.Config.MaxIterations = %d, expected %d", index2.state.Config.MaxIterations, index.state.Config.MaxIterations)
 	}
 
-	if index2.state.Config.Tol != index.state.Config.Tol {
-		t.Fatalf("index2.state.Config.Tol = %f, expected %f", index2.state.Config.Tol, index.state.Config.Tol)
+	if index2.state.Config.Tolerance != index.state.Config.Tolerance {
+		t.Fatalf("index2.state.Config.Tolerance = %f, expected %f", index2.state.Config.Tolerance, index.state.Config.Tolerance)
 	}
 
 	for i := range index.state.Mapping {
@@ -153,7 +153,7 @@ func TestInvertedFileIndexWithPQIndex(t *testing.T) {
 	numIvfClusters := uint8(4)
 	numPqClusters := uint8(1)
 	numIterations := 10
-	tol := 0.001
+	tol := float32(0.001)
 
 	numSubspaces := 1
 	index, err := NewInvertedFilePQIndex(
@@ -161,17 +161,17 @@ func TestInvertedFileIndexWithPQIndex(t *testing.T) {
 		numIvfClusters,
 		numSubspaces,
 		numPqClusters,
-		WithIVFNumIterations(numIterations),
-		WithIVFTol(tol),
+		WithIVFMaxIterations(numIterations),
+		WithIVFTolerance(tol),
 		WithIVFPQIndex(
-			WithPQNumIterations(numIterations),
-			WithPQTol(tol),
+			WithPQMaxIterations(numIterations),
+			WithPQTolerance(tol),
 		),
 	)
 	if err != nil {
 		t.Fatalf("Failed to create index: %v", err)
 	}
-	data := []float64{
+	data := []float32{
 		0.1, 0.2, 0.3, 0.4,
 		0.5, 0.6, 0.7, 0.8,
 		0.9, 1.0, 1.1, 1.2,
@@ -209,7 +209,7 @@ func TestInvertedFileIndexWithPQIndexEncodeDecode(t *testing.T) {
 	numIvfClusters := uint8(4)
 	numPqClusters := uint8(1)
 	numIterations := 10
-	tol := 0.001
+	tol := float32(0.001)
 
 	numSubspaces := 1
 	index, err := NewInvertedFilePQIndex(
@@ -217,17 +217,17 @@ func TestInvertedFileIndexWithPQIndexEncodeDecode(t *testing.T) {
 		numIvfClusters,
 		numSubspaces,
 		numPqClusters,
-		WithIVFNumIterations(numIterations),
-		WithIVFTol(tol),
+		WithIVFMaxIterations(numIterations),
+		WithIVFTolerance(tol),
 		WithIVFPQIndex(
-			WithPQNumIterations(numIterations),
-			WithPQTol(tol),
+			WithPQMaxIterations(numIterations),
+			WithPQTolerance(tol),
 		),
 	)
 	if err != nil {
 		t.Fatalf("Failed to create index: %v", err)
 	}
-	data := []float64{
+	data := []float32{
 		0.1, 0.2, 0.3, 0.4,
 		0.5, 0.6, 0.7, 0.8,
 		0.9, 1.0, 1.1, 1.2,
@@ -275,12 +275,12 @@ func TestInvertedFileIndexWithPQIndexEncodeDecode(t *testing.T) {
 		t.Fatalf("index2.state.ShouldTrainIndexes = %t, expected %t", index2.state.ShouldTrainIndexes, index.state.ShouldTrainIndexes)
 	}
 
-	if index2.state.Config.NumIterations != index.state.Config.NumIterations {
-		t.Fatalf("index2.state.Config.NumIterations = %d, expected %d", index2.state.Config.NumIterations, index.state.Config.NumIterations)
+	if index2.state.Config.MaxIterations != index.state.Config.MaxIterations {
+		t.Fatalf("index2.state.Config.MaxIterations = %d, expected %d", index2.state.Config.MaxIterations, index.state.Config.MaxIterations)
 	}
 
-	if index2.state.Config.Tol != index.state.Config.Tol {
-		t.Fatalf("index2.state.Config.Tol = %f, expected %f", index2.state.Config.Tol, index.state.Config.Tol)
+	if index2.state.Config.Tolerance != index.state.Config.Tolerance {
+		t.Fatalf("index2.state.Config.Tolerance = %f, expected %f", index2.state.Config.Tolerance, index.state.Config.Tolerance)
 	}
 
 	for i := range index.state.Mapping {

@@ -7,7 +7,7 @@ import (
 
 type heapItem struct {
 	index int
-	value float64
+	value float32
 }
 
 type MaxHeap []heapItem
@@ -45,7 +45,7 @@ func NewSmallestK(k int) *SmallestK {
 	}
 }
 
-func (s *SmallestK) Push(index int, value float64) {
+func (s *SmallestK) Push(index int, value float32) {
 	if s.maxHeap.Len() < s.k {
 		heap.Push(s.maxHeap, heapItem{index: index, value: value})
 	} else if (*s.maxHeap)[0].value > value {

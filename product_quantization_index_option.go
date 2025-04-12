@@ -2,16 +2,16 @@ package annindex
 
 type ProductQuantizationIndexOption func(*ProductQuantizationIndexConfig) error
 
-func WithPQNumIterations(numIterations int) ProductQuantizationIndexOption {
+func WithPQMaxIterations(maxIterations int) ProductQuantizationIndexOption {
 	return func(config *ProductQuantizationIndexConfig) error {
-		config.NumIterations = numIterations
+		config.MaxIterations = maxIterations
 		return nil
 	}
 }
 
-func WithPQTol(tol float64) ProductQuantizationIndexOption {
+func WithPQTolerance(tol float32) ProductQuantizationIndexOption {
 	return func(config *ProductQuantizationIndexConfig) error {
-		config.Tol = tol
+		config.Tolerance = tol
 		return nil
 	}
 }

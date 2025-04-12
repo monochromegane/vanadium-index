@@ -11,13 +11,13 @@ func TestProductQuantizationIndex(t *testing.T) {
 	numSubspaces := 2
 	numClusters := uint8(4)
 	numIterations := 10
-	tol := 0.001
-	index, err := NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters, WithPQNumIterations(numIterations), WithPQTol(tol))
+	tol := float32(0.001)
+	index, err := NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters, WithPQMaxIterations(numIterations), WithPQTolerance(tol))
 	if err != nil {
 		t.Fatalf("Failed to create index: %v", err)
 	}
 
-	data := []float64{
+	data := []float32{
 		0.1, 0.2, 0.3, 0.4,
 		0.5, 0.6, 0.7, 0.8,
 		0.9, 1.0, 1.1, 1.2,
@@ -55,13 +55,13 @@ func TestProductQuantizationIndexEncodeDecode(t *testing.T) {
 	numSubspaces := 2
 	numClusters := uint8(4)
 	numIterations := 10
-	tol := 0.001
-	index, err := NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters, WithPQNumIterations(numIterations), WithPQTol(tol))
+	tol := float32(0.001)
+	index, err := NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters, WithPQMaxIterations(numIterations), WithPQTolerance(tol))
 	if err != nil {
 		t.Fatalf("Failed to create index: %v", err)
 	}
 
-	data := []float64{
+	data := []float32{
 		0.1, 0.2, 0.3, 0.4,
 		0.5, 0.6, 0.7, 0.8,
 		0.9, 1.0, 1.1, 1.2,
@@ -114,12 +114,12 @@ func TestProductQuantizationIndexEncodeDecode(t *testing.T) {
 		t.Fatalf("numClusters mismatch: %d != %d", index.state.NumClusters, index2.state.NumClusters)
 	}
 
-	if index.state.Config.NumIterations != index2.state.Config.NumIterations {
-		t.Fatalf("numIterations mismatch: %d != %d", index.state.Config.NumIterations, index2.state.Config.NumIterations)
+	if index.state.Config.MaxIterations != index2.state.Config.MaxIterations {
+		t.Fatalf("numIterations mismatch: %d != %d", index.state.Config.MaxIterations, index2.state.Config.MaxIterations)
 	}
 
-	if index.state.Config.Tol != index2.state.Config.Tol {
-		t.Fatalf("tol mismatch: %f != %f", index.state.Config.Tol, index2.state.Config.Tol)
+	if index.state.Config.Tolerance != index2.state.Config.Tolerance {
+		t.Fatalf("tol mismatch: %f != %f", index.state.Config.Tolerance, index2.state.Config.Tolerance)
 	}
 
 	for i := range index.state.Codebooks {

@@ -2,22 +2,22 @@ package annindex
 
 type InvertedFileIndexOption func(*InvertedFileIndexConfig, []ProductQuantizationIndexOption) error
 
-func WithIVFNumIterations(numIterations int) InvertedFileIndexOption {
+func WithIVFMaxIterations(maxIterations int) InvertedFileIndexOption {
 	return func(config *InvertedFileIndexConfig, _ []ProductQuantizationIndexOption) error {
-		if numIterations <= 0 {
+		if maxIterations <= 0 {
 			return ErrInvalidNumIterations
 		}
-		config.NumIterations = numIterations
+		config.MaxIterations = maxIterations
 		return nil
 	}
 }
 
-func WithIVFTol(tol float64) InvertedFileIndexOption {
+func WithIVFTolerance(tol float32) InvertedFileIndexOption {
 	return func(config *InvertedFileIndexConfig, _ []ProductQuantizationIndexOption) error {
 		if tol <= 0 {
 			return ErrInvalidTol
 		}
-		config.Tol = tol
+		config.Tolerance = tol
 		return nil
 	}
 }

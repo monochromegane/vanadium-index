@@ -7,7 +7,7 @@ import (
 func TestSmallestK(t *testing.T) {
 	h := NewSmallestK(3)
 	indices := []int{0, 1, 2}
-	values := []float64{0.1, 0.3, 0.2}
+	values := []float32{0.1, 0.3, 0.2}
 	for i, index := range indices {
 		h.Push(index, values[i])
 	}
@@ -30,7 +30,7 @@ func TestSmallestK(t *testing.T) {
 func TestSmallestKOverK(t *testing.T) {
 	h := NewSmallestK(3)
 	indices := []int{0, 1, 2, 3}
-	values := []float64{0.1, 0.3, 0.2, 0.0}
+	values := []float32{0.1, 0.3, 0.2, 0.0}
 	for i, index := range indices {
 		h.Push(index, values[i])
 	}
