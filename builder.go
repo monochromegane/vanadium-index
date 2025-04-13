@@ -17,9 +17,9 @@ func AsPQ(numSubspaces int, numClusters int, opts ...ProductQuantizationIndexOpt
 		}
 
 		switch {
-		case numClusters < 256:
+		case numClusters < math.MaxUint8:
 			return NewProductQuantizationIndex(config.NumFeatures, numSubspaces, uint8(numClusters), opts...)
-		case numClusters < 65536:
+		case numClusters < math.MaxUint16:
 			return NewProductQuantizationIndex(config.NumFeatures, numSubspaces, uint16(numClusters), opts...)
 		default:
 			return NewProductQuantizationIndex(config.NumFeatures, numSubspaces, uint32(numClusters), opts...)
@@ -34,9 +34,9 @@ func AsIVFFlat(numClusters int, opts ...InvertedFileIndexOption) (IndexBuilder, 
 		}
 
 		switch {
-		case numClusters < 256:
+		case numClusters < math.MaxUint8:
 			return NewInvertedFileFlatIndex(config.NumFeatures, uint8(numClusters), opts...)
-		case numClusters < 65536:
+		case numClusters < math.MaxUint16:
 			return NewInvertedFileFlatIndex(config.NumFeatures, uint16(numClusters), opts...)
 		default:
 			return NewInvertedFileFlatIndex(config.NumFeatures, uint32(numClusters), opts...)
@@ -51,29 +51,29 @@ func AsIVFPQ(numClusters int, numSubspaces int, numClustersPerSubspace int, opts
 		}
 
 		switch {
-		case numClusters < 256:
+		case numClusters < math.MaxUint8:
 			switch {
-			case numClustersPerSubspace < 256:
+			case numClustersPerSubspace < math.MaxUint8:
 				return NewInvertedFilePQIndex(config.NumFeatures, uint8(numClusters), numSubspaces, uint8(numClustersPerSubspace), opts...)
-			case numClustersPerSubspace < 65536:
+			case numClustersPerSubspace < math.MaxUint16:
 				return NewInvertedFilePQIndex(config.NumFeatures, uint8(numClusters), numSubspaces, uint16(numClustersPerSubspace), opts...)
 			default:
 				return NewInvertedFilePQIndex(config.NumFeatures, uint8(numClusters), numSubspaces, uint32(numClustersPerSubspace), opts...)
 			}
-		case numClusters < 65536:
+		case numClusters < math.MaxUint16:
 			switch {
-			case numClustersPerSubspace < 256:
+			case numClustersPerSubspace < math.MaxUint8:
 				return NewInvertedFilePQIndex(config.NumFeatures, uint16(numClusters), numSubspaces, uint8(numClustersPerSubspace), opts...)
-			case numClustersPerSubspace < 65536:
+			case numClustersPerSubspace < math.MaxUint16:
 				return NewInvertedFilePQIndex(config.NumFeatures, uint16(numClusters), numSubspaces, uint16(numClustersPerSubspace), opts...)
 			default:
 				return NewInvertedFilePQIndex(config.NumFeatures, uint16(numClusters), numSubspaces, uint32(numClustersPerSubspace), opts...)
 			}
 		default:
 			switch {
-			case numClustersPerSubspace < 256:
+			case numClustersPerSubspace < math.MaxUint8:
 				return NewInvertedFilePQIndex(config.NumFeatures, uint32(numClusters), numSubspaces, uint8(numClustersPerSubspace), opts...)
-			case numClustersPerSubspace < 65536:
+			case numClustersPerSubspace < math.MaxUint16:
 				return NewInvertedFilePQIndex(config.NumFeatures, uint32(numClusters), numSubspaces, uint16(numClustersPerSubspace), opts...)
 			default:
 				return NewInvertedFilePQIndex(config.NumFeatures, uint32(numClusters), numSubspaces, uint32(numClustersPerSubspace), opts...)
