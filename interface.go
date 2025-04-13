@@ -12,7 +12,7 @@ type ANNIndex interface {
 }
 
 type CodeType interface {
-	~uint8 | ~uint16 | ~uint32 | ~uint64
+	~uint8 | ~uint16 | ~uint32
 }
 
 type subIndexBuilder interface {

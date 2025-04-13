@@ -1,6 +1,9 @@
 package annindex
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 var ErrInvalidDataLength = fmt.Errorf("data length must be divisible by the number of features")
 
@@ -12,7 +15,7 @@ var ErrInvalidK = fmt.Errorf("k must be greater than 0")
 
 var ErrInvalidNumSubspaces = fmt.Errorf("number of subspaces must be greater than 0")
 
-var ErrInvalidNumClusters = fmt.Errorf("number of clusters must be greater than 0")
+var ErrInvalidNumClusters = fmt.Errorf("number of clusters must be greater than 0 and less than or equal to %d", math.MaxUint32)
 
 var ErrInvalidNumIterations = fmt.Errorf("number of iterations must be greater than 0")
 
