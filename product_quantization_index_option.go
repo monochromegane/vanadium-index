@@ -1,4 +1,4 @@
-package annindex
+package vanadium_index
 
 type ProductQuantizationIndexOption func(*ProductQuantizationIndexConfig) error
 

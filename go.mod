@@ -1,4 +1,4 @@
-module github.com/monochromegane/annindex
+module github.com/monochromegane/vanadium-index
 
 go 1.24.2
 
