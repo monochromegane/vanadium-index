@@ -4,13 +4,13 @@ import "math"
 
 type IndexBuilder func(*IndexConfig) (ANNIndex, error)
 
-func AsFlat() (IndexBuilder, error) {
+func AsFlat() IndexBuilder {
 	return func(config *IndexConfig) (ANNIndex, error) {
 		return NewFlatIndex(config.NumFeatures)
-	}, nil
+	}
 }
 
-func AsPQ(numSubspaces int, numClusters int, opts ...ProductQuantizationIndexOption) (IndexBuilder, error) {
+func AsPQ(numSubspaces int, numClusters int, opts ...ProductQuantizationIndexOption) IndexBuilder {
 	return func(config *IndexConfig) (ANNIndex, error) {
 		if numClusters <= 0 || numClusters > math.MaxUint32 {
 			return nil, ErrInvalidNumClusters
@@ -24,10 +24,10 @@ func AsPQ(numSubspaces int, numClusters int, opts ...ProductQuantizationIndexOpt
 		default:
 			return NewProductQuantizationIndex(config.NumFeatures, numSubspaces, uint32(numClusters), opts...)
 		}
-	}, nil
+	}
 }
 
-func AsIVFFlat(numClusters int, opts ...InvertedFileIndexOption) (IndexBuilder, error) {
+func AsIVFFlat(numClusters int, opts ...InvertedFileIndexOption) IndexBuilder {
 	return func(config *IndexConfig) (ANNIndex, error) {
 		if numClusters <= 0 || numClusters > math.MaxUint32 {
 			return nil, ErrInvalidNumClusters
@@ -41,10 +41,10 @@ func AsIVFFlat(numClusters int, opts ...InvertedFileIndexOption) (IndexBuilder, 
 		default:
 			return NewInvertedFileFlatIndex(config.NumFeatures, uint32(numClusters), opts...)
 		}
-	}, nil
+	}
 }
 
-func AsIVFPQ(numClusters int, numSubspaces int, numClustersPerSubspace int, opts ...InvertedFileIndexOption) (IndexBuilder, error) {
+func AsIVFPQ(numClusters int, numSubspaces int, numClustersPerSubspace int, opts ...InvertedFileIndexOption) IndexBuilder {
 	return func(config *IndexConfig) (ANNIndex, error) {
 		if numClusters <= 0 || numClustersPerSubspace <= 0 || numClusters > math.MaxUint32 || numClustersPerSubspace > math.MaxUint32 {
 			return nil, ErrInvalidNumClusters
@@ -79,7 +79,7 @@ func AsIVFPQ(numClusters int, numSubspaces int, numClustersPerSubspace int, opts
 				return NewInvertedFilePQIndex(config.NumFeatures, uint32(numClusters), numSubspaces, uint32(numClustersPerSubspace), opts...)
 			}
 		}
-	}, nil
+	}
 }
 
 type IndexConfig struct {
