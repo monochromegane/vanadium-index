@@ -11,7 +11,7 @@ func TestInvertedFileIndex(t *testing.T) {
 	numClusters := uint8(4)
 	numIterations := 10
 	tol := float32(0.001)
-	index, err := NewInvertedFileFlatIndex(
+	index, err := newInvertedFileFlatIndex(
 		numFeatures,
 		numClusters,
 		WithIVFMaxIterations(numIterations),
@@ -58,7 +58,7 @@ func TestInvertedFileIndexEncodeDecode(t *testing.T) {
 	numClusters := uint8(4)
 	numIterations := 10
 	tol := float32(0.001)
-	index, err := NewInvertedFileFlatIndex(
+	index, err := newInvertedFileFlatIndex(
 		numFeatures,
 		numClusters,
 		WithIVFMaxIterations(numIterations),
@@ -156,7 +156,7 @@ func TestInvertedFileIndexWithPQIndex(t *testing.T) {
 	tol := float32(0.001)
 
 	numSubspaces := 1
-	index, err := NewInvertedFilePQIndex(
+	index, err := newInvertedFilePQIndex(
 		numFeatures,
 		numIvfClusters,
 		numSubspaces,
@@ -212,7 +212,7 @@ func TestInvertedFileIndexWithPQIndexEncodeDecode(t *testing.T) {
 	tol := float32(0.001)
 
 	numSubspaces := 1
-	index, err := NewInvertedFilePQIndex(
+	index, err := newInvertedFilePQIndex(
 		numFeatures,
 		numIvfClusters,
 		numSubspaces,

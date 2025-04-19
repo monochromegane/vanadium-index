@@ -28,7 +28,7 @@ type InvertedFileIndexConfig struct {
 	Tolerance     float32
 }
 
-func NewInvertedFileFlatIndex[T CodeType](
+func newInvertedFileFlatIndex[T CodeType](
 	numFeatures int,
 	numClusters T,
 	opts ...InvertedFileIndexOption,
@@ -66,7 +66,7 @@ func LoadInvertedFileFlatIndex[T CodeType](dec *gob.Decoder) (*InvertedFileIndex
 	return index, nil
 }
 
-func NewInvertedFilePQIndex[T1, T2 CodeType](
+func newInvertedFilePQIndex[T1, T2 CodeType](
 	numFeatures int,
 	numIvfClusters T1,
 	numPqSubspaces int,
@@ -324,7 +324,7 @@ func (index *InvertedFileIndex[T1, T2]) Decode(dec *gob.Decoder) error {
 type subFlatIndexBuilder struct{}
 
 func (b *subFlatIndexBuilder) build(numFeatures int) (ANNIndex, error) {
-	return NewFlatIndex(numFeatures)
+	return newFlatIndex(numFeatures)
 }
 
 type subPQIndexBuilder[T CodeType] struct {
@@ -334,5 +334,5 @@ type subPQIndexBuilder[T CodeType] struct {
 }
 
 func (b *subPQIndexBuilder[T]) build(numFeatures int) (ANNIndex, error) {
-	return NewProductQuantizationIndex(numFeatures, b.numSubspaces, b.numClusters, b.opts...)
+	return newProductQuantizationIndex(numFeatures, b.numSubspaces, b.numClusters, b.opts...)
 }

@@ -30,7 +30,7 @@ type ProductQuantizationIndexConfig struct {
 	Tolerance     float32
 }
 
-func NewProductQuantizationIndex[T CodeType](
+func newProductQuantizationIndex[T CodeType](
 	numFeatures, numSubspaces int,
 	numClusters T,
 	opts ...ProductQuantizationIndexOption,

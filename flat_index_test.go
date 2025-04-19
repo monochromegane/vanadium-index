@@ -7,7 +7,7 @@ import (
 )
 
 func TestFlatIndexSearch(t *testing.T) {
-	index, _ := NewFlatIndex(2)
+	index, _ := newFlatIndex(2)
 	index.Add([]float32{1, 2, 3, 4})
 	index.Add([]float32{5, 6})
 
@@ -23,7 +23,7 @@ func TestFlatIndexSearch(t *testing.T) {
 }
 
 func TestFlatIndexEncodeDecode(t *testing.T) {
-	index, _ := NewFlatIndex(2)
+	index, _ := newFlatIndex(2)
 	index.Add([]float32{1, 2, 3, 4})
 	index.Add([]float32{5, 6})
 

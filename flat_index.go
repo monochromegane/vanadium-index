@@ -13,7 +13,7 @@ type FlatIndexState struct {
 	Data        []float32
 }
 
-func NewFlatIndex(numFeatures int) (*FlatIndex, error) {
+func newFlatIndex(numFeatures int) (*FlatIndex, error) {
 	if numFeatures <= 0 {
 		return nil, ErrInvalidNumFeatures
 	}

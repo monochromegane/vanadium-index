@@ -6,7 +6,7 @@ import (
 
 func TestFlatIndexInterface(t *testing.T) {
 	var index ANNIndex
-	index, _ = NewFlatIndex(2)
+	index, _ = newFlatIndex(2)
 	if _, ok := index.(*FlatIndex); !ok {
 		t.Fatalf("index is not a FlatIndex")
 	}
@@ -14,7 +14,7 @@ func TestFlatIndexInterface(t *testing.T) {
 
 func TestProductQuantizationIndexInterface(t *testing.T) {
 	var index ANNIndex
-	index, _ = NewProductQuantizationIndex[uint8](2, 2, 2, WithPQMaxIterations(10), WithPQTolerance(0.001))
+	index, _ = newProductQuantizationIndex[uint8](2, 2, 2, WithPQMaxIterations(10), WithPQTolerance(0.001))
 	if _, ok := index.(*ProductQuantizationIndex[uint8]); !ok {
 		t.Fatalf("index is not a ProductQuantizationIndex")
 	}
@@ -22,7 +22,7 @@ func TestProductQuantizationIndexInterface(t *testing.T) {
 
 func TestInvertedFileFlatIndexInterface(t *testing.T) {
 	var index ANNIndex
-	index, _ = NewInvertedFileFlatIndex[uint8](2, 2, WithIVFMaxIterations(10), WithIVFTolerance(0.001))
+	index, _ = newInvertedFileFlatIndex[uint8](2, 2, WithIVFMaxIterations(10), WithIVFTolerance(0.001))
 	if _, ok := index.(*InvertedFileIndex[uint8, uint8]); !ok {
 		t.Fatalf("index is not a InvertedFileIndex")
 	}
@@ -30,7 +30,7 @@ func TestInvertedFileFlatIndexInterface(t *testing.T) {
 
 func TestInvertedFilePQIndexInterface(t *testing.T) {
 	var index ANNIndex
-	index, _ = NewInvertedFilePQIndex[uint8, uint8](2, 2, 2, 2, WithIVFMaxIterations(10), WithIVFTolerance(0.001), WithIVFPQIndex(
+	index, _ = newInvertedFilePQIndex[uint8, uint8](2, 2, 2, 2, WithIVFMaxIterations(10), WithIVFTolerance(0.001), WithIVFPQIndex(
 		WithPQMaxIterations(10), WithPQTolerance(0.001),
 	))
 	if _, ok := index.(*InvertedFileIndex[uint8, uint8]); !ok {

@@ -12,7 +12,7 @@ func TestProductQuantizationIndex(t *testing.T) {
 	numClusters := uint8(4)
 	numIterations := 10
 	tol := float32(0.001)
-	index, err := NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters, WithPQMaxIterations(numIterations), WithPQTolerance(tol))
+	index, err := newProductQuantizationIndex(numFeatures, numSubspaces, numClusters, WithPQMaxIterations(numIterations), WithPQTolerance(tol))
 	if err != nil {
 		t.Fatalf("Failed to create index: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestProductQuantizationIndexEncodeDecode(t *testing.T) {
 	numClusters := uint8(4)
 	numIterations := 10
 	tol := float32(0.001)
-	index, err := NewProductQuantizationIndex(numFeatures, numSubspaces, numClusters, WithPQMaxIterations(numIterations), WithPQTolerance(tol))
+	index, err := newProductQuantizationIndex(numFeatures, numSubspaces, numClusters, WithPQMaxIterations(numIterations), WithPQTolerance(tol))
 	if err != nil {
 		t.Fatalf("Failed to create index: %v", err)
 	}
