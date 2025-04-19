@@ -2,6 +2,7 @@ package vanadium_index
 
 import (
 	"encoding/gob"
+	"reflect"
 	"runtime"
 
 	"github.com/monochromegane/kmeans"
@@ -86,9 +87,9 @@ func newProductQuantizationIndex[T CodeType](
 	return index, nil
 }
 
-func LoadProductQuantizationIndex[T CodeType](dec *gob.Decoder) (*ProductQuantizationIndex[T], error) {
+func loadProductQuantizationIndex[T CodeType](dec *gob.Decoder) (*ProductQuantizationIndex[T], error) {
 	index := &ProductQuantizationIndex[T]{}
-	err := index.Decode(dec)
+	err := index.decode(dec)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +297,21 @@ func (index *ProductQuantizationIndex[T]) NumVectors() int {
 	return index.state.NumVectors
 }
 
-func (index *ProductQuantizationIndex[T]) Encode(enc *gob.Encoder) error {
+func (index *ProductQuantizationIndex[T]) Save(enc *gob.Encoder) error {
+	var t T
+	meta := MetaData{
+		IndexType: IndexTypePQ,
+		CodeType1: CodeTypeName(reflect.TypeOf(t).String()),
+		CodeType2: CodeTypeNameNone,
+	}
+	err := enc.Encode(meta)
+	if err != nil {
+		return err
+	}
+	return index.encode(enc)
+}
+
+func (index *ProductQuantizationIndex[T]) encode(enc *gob.Encoder) error {
 	err := enc.Encode(index.state)
 	if err != nil {
 		return err
@@ -310,7 +325,7 @@ func (index *ProductQuantizationIndex[T]) Encode(enc *gob.Encoder) error {
 	return nil
 }
 
-func (index *ProductQuantizationIndex[T]) Decode(dec *gob.Decoder) error {
+func (index *ProductQuantizationIndex[T]) decode(dec *gob.Decoder) error {
 	index.state = &ProductQuantizationState[T]{
 		Config: &ProductQuantizationIndexConfig{},
 	}

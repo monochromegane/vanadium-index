@@ -25,9 +25,9 @@ func newFlatIndex(numFeatures int) (*FlatIndex, error) {
 	}, nil
 }
 
-func LoadFlatIndex(dec *gob.Decoder) (*FlatIndex, error) {
+func loadFlatIndex(dec *gob.Decoder) (*FlatIndex, error) {
 	index := &FlatIndex{}
-	err := index.Decode(dec)
+	err := index.decode(dec)
 	if err != nil {
 		return nil, err
 	}
@@ -93,11 +93,24 @@ func (index *FlatIndex) NumVectors() int {
 	return len(index.state.Data) / index.state.NumFeatures
 }
 
-func (index *FlatIndex) Encode(enc *gob.Encoder) error {
+func (index *FlatIndex) Save(enc *gob.Encoder) error {
+	meta := MetaData{
+		IndexType: IndexTypeFlat,
+		CodeType1: CodeTypeNameNone,
+		CodeType2: CodeTypeNameNone,
+	}
+	err := enc.Encode(meta)
+	if err != nil {
+		return err
+	}
+	return index.encode(enc)
+}
+
+func (index *FlatIndex) encode(enc *gob.Encoder) error {
 	return enc.Encode(index.state)
 }
 
-func (index *FlatIndex) Decode(dec *gob.Decoder) error {
+func (index *FlatIndex) decode(dec *gob.Decoder) error {
 	index.state = &FlatIndexState{}
 	return dec.Decode(index.state)
 }

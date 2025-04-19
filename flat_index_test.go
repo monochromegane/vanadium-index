@@ -22,22 +22,27 @@ func TestFlatIndexSearch(t *testing.T) {
 	}
 }
 
-func TestFlatIndexEncodeDecode(t *testing.T) {
+func TestFlatIndexSaveLoad(t *testing.T) {
 	index, _ := newFlatIndex(2)
 	index.Add([]float32{1, 2, 3, 4})
 	index.Add([]float32{5, 6})
 
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
-	err := index.Encode(enc)
+	err := index.Save(enc)
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
 
 	dec := gob.NewDecoder(&buf)
-	index2, err := LoadFlatIndex(dec)
+	annIndex, err := LoadIndex(dec)
 	if err != nil {
 		t.Fatalf("error: %v", err)
+	}
+
+	index2, ok := annIndex.(*FlatIndex)
+	if !ok {
+		t.Fatalf("loaded index is not a FlatIndex")
 	}
 
 	if index2.state.NumFeatures != index.state.NumFeatures {

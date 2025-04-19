@@ -7,8 +7,10 @@ type ANNIndex interface {
 	Add(data []float32) error
 	Search(query []float32, k int) ([][]int, error)
 	NumVectors() int
-	Encode(enc *gob.Encoder) error
-	Decode(dec *gob.Decoder) error
+	Save(enc *gob.Encoder) error
+
+	encode(enc *gob.Encoder) error
+	decode(dec *gob.Decoder) error
 }
 
 type CodeType interface {

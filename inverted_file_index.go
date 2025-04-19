@@ -2,6 +2,7 @@ package vanadium_index
 
 import (
 	"encoding/gob"
+	"reflect"
 	"runtime"
 
 	"github.com/monochromegane/kmeans"
@@ -57,15 +58,6 @@ func newInvertedFileFlatIndex[T CodeType](
 	return newInvertedFileIndex(index, indexBuilder)
 }
 
-func LoadInvertedFileFlatIndex[T CodeType](dec *gob.Decoder) (*InvertedFileIndex[T, T], error) {
-	index := &InvertedFileIndex[T, T]{}
-	err := index.Decode(dec)
-	if err != nil {
-		return nil, err
-	}
-	return index, nil
-}
-
 func newInvertedFilePQIndex[T1, T2 CodeType](
 	numFeatures int,
 	numIvfClusters T1,
@@ -102,9 +94,9 @@ func newInvertedFilePQIndex[T1, T2 CodeType](
 	return newInvertedFileIndex(index, indexBuilder)
 }
 
-func LoadInvertedFilePQIndex[T1, T2 CodeType](dec *gob.Decoder) (*InvertedFileIndex[T1, T2], error) {
+func loadInvertedFile[T1, T2 CodeType](dec *gob.Decoder) (*InvertedFileIndex[T1, T2], error) {
 	index := &InvertedFileIndex[T1, T2]{}
-	err := index.Decode(dec)
+	err := index.decode(dec)
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +265,22 @@ func (index *InvertedFileIndex[T1, T2]) NumVectors() int {
 	return numVectors
 }
 
-func (index *InvertedFileIndex[T1, T2]) Encode(enc *gob.Encoder) error {
+func (index *InvertedFileIndex[T1, T2]) Save(enc *gob.Encoder) error {
+	var t1 T1
+	var t2 T2
+	meta := MetaData{
+		IndexType: IndexTypeIVF,
+		CodeType1: CodeTypeName(reflect.TypeOf(t1).String()),
+		CodeType2: CodeTypeName(reflect.TypeOf(t2).String()),
+	}
+	err := enc.Encode(meta)
+	if err != nil {
+		return err
+	}
+	return index.encode(enc)
+}
+
+func (index *InvertedFileIndex[T1, T2]) encode(enc *gob.Encoder) error {
 	err := enc.Encode(index.state)
 	if err != nil {
 		return err
@@ -283,7 +290,7 @@ func (index *InvertedFileIndex[T1, T2]) Encode(enc *gob.Encoder) error {
 		return err
 	}
 	for _, index := range index.indexes {
-		err = index.Encode(enc)
+		err = index.encode(enc)
 		if err != nil {
 			return err
 		}
@@ -291,7 +298,7 @@ func (index *InvertedFileIndex[T1, T2]) Encode(enc *gob.Encoder) error {
 	return nil
 }
 
-func (index *InvertedFileIndex[T1, T2]) Decode(dec *gob.Decoder) error {
+func (index *InvertedFileIndex[T1, T2]) decode(dec *gob.Decoder) error {
 	index.state = &InvertedFileIndexState[T1, T2]{
 		Config: &InvertedFileIndexConfig{},
 	}
@@ -309,9 +316,9 @@ func (index *InvertedFileIndex[T1, T2]) Decode(dec *gob.Decoder) error {
 	index.indexes = make([]ANNIndex, index.state.NumClusters)
 	for i := range int(index.state.NumClusters) {
 		if index.state.ShouldTrainIndexes {
-			index.indexes[i], err = LoadProductQuantizationIndex[T2](dec)
+			index.indexes[i], err = loadProductQuantizationIndex[T2](dec)
 		} else {
-			index.indexes[i], err = LoadFlatIndex(dec)
+			index.indexes[i], err = loadFlatIndex(dec)
 		}
 		if err != nil {
 			return err

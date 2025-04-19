@@ -50,7 +50,7 @@ func TestProductQuantizationIndex(t *testing.T) {
 	}
 }
 
-func TestProductQuantizationIndexEncodeDecode(t *testing.T) {
+func TestProductQuantizationIndexSaveLoad(t *testing.T) {
 	numFeatures := 4
 	numSubspaces := 2
 	numClusters := uint8(4)
@@ -82,15 +82,20 @@ func TestProductQuantizationIndexEncodeDecode(t *testing.T) {
 
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
-	err = index.Encode(enc)
+	err = index.Save(enc)
 	if err != nil {
-		t.Fatalf("Failed to encode index: %v", err)
+		t.Fatalf("Failed to save index: %v", err)
 	}
 
 	dec := gob.NewDecoder(&buf)
-	index2, err := LoadProductQuantizationIndex[uint8](dec)
+	annIndex, err := LoadIndex(dec)
 	if err != nil {
-		t.Fatalf("Failed to decode index: %v", err)
+		t.Fatalf("error: %v", err)
+	}
+
+	index2, ok := annIndex.(*ProductQuantizationIndex[uint8])
+	if !ok {
+		t.Fatalf("loaded index is not a ProductQuantizationIndex")
 	}
 
 	if index2.state.NumFeatures != index.state.NumFeatures {

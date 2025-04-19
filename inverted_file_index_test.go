@@ -53,7 +53,7 @@ func TestInvertedFileIndex(t *testing.T) {
 	}
 }
 
-func TestInvertedFileIndexEncodeDecode(t *testing.T) {
+func TestInvertedFileIndexSaveLoad(t *testing.T) {
 	numFeatures := 4
 	numClusters := uint8(4)
 	numIterations := 10
@@ -88,15 +88,19 @@ func TestInvertedFileIndexEncodeDecode(t *testing.T) {
 
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
-	err = index.Encode(enc)
+	err = index.Save(enc)
 	if err != nil {
 		t.Fatalf("Failed to encode index: %v", err)
 	}
 
 	dec := gob.NewDecoder(&buf)
-	index2, err := LoadInvertedFileFlatIndex[uint8](dec)
+	annIndex, err := LoadIndex(dec)
 	if err != nil {
-		t.Fatalf("Failed to decode index: %v", err)
+		t.Fatalf("error: %v", err)
+	}
+	index2, ok := annIndex.(*InvertedFileIndex[uint8, uint8])
+	if !ok {
+		t.Fatalf("loaded index is not a InvertedFileIndex")
 	}
 
 	if index2.state.NumFeatures != index.state.NumFeatures {
@@ -204,7 +208,7 @@ func TestInvertedFileIndexWithPQIndex(t *testing.T) {
 	}
 }
 
-func TestInvertedFileIndexWithPQIndexEncodeDecode(t *testing.T) {
+func TestInvertedFileIndexWithPQIndexSaveLoad(t *testing.T) {
 	numFeatures := 4
 	numIvfClusters := uint8(4)
 	numPqClusters := uint8(1)
@@ -248,15 +252,19 @@ func TestInvertedFileIndexWithPQIndexEncodeDecode(t *testing.T) {
 
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
-	err = index.Encode(enc)
+	err = index.Save(enc)
 	if err != nil {
 		t.Fatalf("Failed to encode index: %v", err)
 	}
 
 	dec := gob.NewDecoder(&buf)
-	index2, err := LoadInvertedFilePQIndex[uint8, uint8](dec)
+	annIndex, err := LoadIndex(dec)
 	if err != nil {
-		t.Fatalf("Failed to decode index: %v", err)
+		t.Fatalf("error: %v", err)
+	}
+	index2, ok := annIndex.(*InvertedFileIndex[uint8, uint8])
+	if !ok {
+		t.Fatalf("loaded index is not a InvertedFileIndex")
 	}
 
 	if index2.state.NumFeatures != index.state.NumFeatures {
