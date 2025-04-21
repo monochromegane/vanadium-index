@@ -189,21 +189,21 @@ func (index *ProductQuantizationIndex[T]) Add(data []float32) error {
 	return nil
 }
 
-func (index *ProductQuantizationIndex[T]) Search(query []float32, k int) ([][]int, error) {
+func (index *ProductQuantizationIndex[T]) Search(query []float32, k int) ([][]int, [][]float32, error) {
 	if k <= 0 {
-		return nil, ErrInvalidK
+		return nil, nil, ErrInvalidK
 	}
 
 	if len(query) == 0 {
-		return nil, ErrEmptyData
+		return nil, nil, ErrEmptyData
 	}
 
 	if len(query)%index.state.NumFeatures != 0 {
-		return nil, ErrInvalidDataLength
+		return nil, nil, ErrInvalidDataLength
 	}
 
 	if !index.state.IsTrained {
-		return nil, ErrNotTrained
+		return nil, nil, ErrNotTrained
 	}
 
 	type distanceItem struct {
@@ -234,7 +234,7 @@ func (index *ProductQuantizationIndex[T]) Search(query []float32, k int) ([][]in
 			})
 		}
 		if err := eg.Wait(); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		chunkSize := index.state.NumVectors / numWorkers
@@ -283,14 +283,17 @@ func (index *ProductQuantizationIndex[T]) Search(query []float32, k int) ([][]in
 	}
 
 	results := make([][]int, numQueries)
+	distances := make([][]float32, numQueries)
 	for q := range numQueries {
 		results[q] = make([]int, k)
+		distances[q] = make([]float32, k)
 		for i := range k {
 			results[q][i] = neighbors[q].SmallestK()[i].index
+			distances[q][i] = neighbors[q].SmallestK()[i].value
 		}
 	}
 
-	return results, nil
+	return results, distances, nil
 }
 
 func (index *ProductQuantizationIndex[T]) NumVectors() int {

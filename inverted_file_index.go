@@ -219,42 +219,45 @@ func (index *InvertedFileIndex[T1, T2]) Add(data []float32) error {
 	return nil
 }
 
-func (index *InvertedFileIndex[T1, T2]) Search(query []float32, k int) ([][]int, error) {
+func (index *InvertedFileIndex[T1, T2]) Search(query []float32, k int) ([][]int, [][]float32, error) {
 	if k <= 0 {
-		return nil, ErrInvalidK
+		return nil, nil, ErrInvalidK
 	}
 
 	if len(query) == 0 {
-		return nil, ErrEmptyData
+		return nil, nil, ErrEmptyData
 	}
 
 	if len(query)%index.state.NumFeatures != 0 {
-		return nil, ErrInvalidDataLength
+		return nil, nil, ErrInvalidDataLength
 	}
 
 	if !index.state.IsTrained {
-		return nil, ErrNotTrained
+		return nil, nil, ErrNotTrained
 	}
 
 	numQueries := len(query) / index.state.NumFeatures
 	results := make([][]int, numQueries)
+	distances := make([][]float32, numQueries)
 	err := index.cluster.Predict(query, func(row int, minCol int, minVal float32) error {
 		rowQuery := query[row*index.state.NumFeatures : (row+1)*index.state.NumFeatures]
-		result, err := index.indexes[minCol].Search(rowQuery, k)
+		result, distance, err := index.indexes[minCol].Search(rowQuery, k)
 		if err != nil {
 			return err
 		}
 		results[row] = make([]int, len(result[0]))
+		distances[row] = make([]float32, len(distance[0]))
 		for i, r := range result[0] {
 			results[row][i] = index.state.Mapping[minCol][r]
+			distances[row][i] = distance[0][i]
 		}
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return results, nil
+	return results, distances, nil
 }
 
 func (index *InvertedFileIndex[T1, T2]) NumVectors() int {

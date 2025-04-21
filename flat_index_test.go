@@ -11,13 +11,18 @@ func TestFlatIndexSearch(t *testing.T) {
 	index.Add([]float32{1, 2, 3, 4})
 	index.Add([]float32{5, 6})
 
-	results, err := index.Search([]float32{1, 2, 3, 4, 5, 6}, 1)
+	results, distances, err := index.Search([]float32{1, 2, 3, 4, 5, 6}, 1)
 	if err != nil {
 		t.Fatalf("error: %v", err)
 	}
 	for i, result := range results {
 		if result[0] != i {
 			t.Fatalf("result[%d] = %d, expected %d", i, result[0], i)
+		}
+	}
+	for i, distance := range distances {
+		if distance[0] != 0 {
+			t.Fatalf("distance[%d] = %f, expected 0", i, distance[0])
 		}
 	}
 }

@@ -51,17 +51,17 @@ func (index *FlatIndex) Add(data []float32) error {
 	return nil
 }
 
-func (index *FlatIndex) Search(query []float32, k int) ([][]int, error) {
+func (index *FlatIndex) Search(query []float32, k int) ([][]int, [][]float32, error) {
 	if k <= 0 {
-		return nil, ErrInvalidK
+		return nil, nil, ErrInvalidK
 	}
 
 	if len(query) == 0 {
-		return nil, ErrEmptyData
+		return nil, nil, ErrEmptyData
 	}
 
 	if len(query)%index.state.NumFeatures != 0 {
-		return nil, ErrInvalidDataLength
+		return nil, nil, ErrInvalidDataLength
 	}
 
 	N := len(index.state.Data) / index.state.NumFeatures
@@ -79,14 +79,17 @@ func (index *FlatIndex) Search(query []float32, k int) ([][]int, error) {
 	}
 
 	results := make([][]int, numQueries)
+	distances := make([][]float32, numQueries)
 	for q := range numQueries {
 		results[q] = make([]int, k)
+		distances[q] = make([]float32, k)
 		for i := range k {
 			results[q][i] = neighbors[q].SmallestK()[i].index
+			distances[q][i] = neighbors[q].SmallestK()[i].value
 		}
 	}
 
-	return results, nil
+	return results, distances, nil
 }
 
 func (index *FlatIndex) NumVectors() int {

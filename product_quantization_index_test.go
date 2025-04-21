@@ -38,7 +38,7 @@ func TestProductQuantizationIndex(t *testing.T) {
 
 	query := data
 
-	results, err := index.Search(query, 1)
+	results, distances, err := index.Search(query, 1)
 	if err != nil {
 		t.Fatalf("Failed to search index: %v", err)
 	}
@@ -46,6 +46,12 @@ func TestProductQuantizationIndex(t *testing.T) {
 	for i, result := range results {
 		if result[0] != i {
 			t.Fatalf("result[%d] = %d, expected %d", i, result[0], i)
+		}
+	}
+
+	for i, distance := range distances {
+		if distance[0] != 0 {
+			t.Fatalf("distance[%d] = %f, expected 0", i, distance[0])
 		}
 	}
 }

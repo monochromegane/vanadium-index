@@ -5,7 +5,7 @@ import "encoding/gob"
 type ANNIndex interface {
 	Train(data []float32) error
 	Add(data []float32) error
-	Search(query []float32, k int) ([][]int, error)
+	Search(query []float32, k int) ([][]int, [][]float32, error)
 	NumVectors() int
 	Save(enc *gob.Encoder) error
 
