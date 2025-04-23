@@ -1,0 +1,28 @@
+name: c-shared-release
+env:
+  PKG_NAME: vanadium-index
+inputs:
+  token:
+    description: GitHub token
+    required: true
+runs:
+  using: composite
+  steps:
+  - name: Setup Go packages
+    run: |
+      go install github.com/x-motemen/gobump/cmd/gobump@latest
+      go install github.com/tcnksm/ghr@latest
+  - name: Download archive
+    uses: actions/download-artifact@v4
+    with:
+      path: tmp
+  - name: Flatten to dist
+    shell: bash
+    run: |
+      mkdir -p dist
+      find tmp -type f \( -name '*.zip' -o -name '*.tar.gz' \) -exec mv {} dist/ \;
+  - name: Publish GitHub Release
+    shell: bash
+    run: |
+      VERSION=$(gobump show -r .)
+      ghr v${VERSION} dist

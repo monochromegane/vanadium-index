@@ -1,0 +1,23 @@
+name: release
+on:
+  push:
+    tags:
+    - "v[0-9]+.[0-9]+.[0-9]+"
+jobs:
+  c-shared-builds:
+    strategy:
+      matrix: ${{ fromJson(readFile('.github/matrix/c-shared-build.json')) }}
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/c-shared-build
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+  c-shared-release:
+    needs: c-shared-builds
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/c-shared-release
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
