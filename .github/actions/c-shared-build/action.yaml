@@ -26,7 +26,7 @@ runs:
     shell: bash
     run: |
       mkdir dist
-      go build -o dist/${LIB_FILE} -buildmode=c-shared -ldflags="-s -w" cmd/c-shared-build/main.go
+      go build -o dist/${LIB_FILE} -buildmode=c-shared -ldflags="-s -w" c-shared/vanadium-index/main.go
       if [ "${{ matrix.archive }}" = "zip" ]; then
         zip -j ${ARCHIVE_FILE} dist/${LIB_FILE} dist/${HEADER_FILE}
       elif [ "${{ matrix.archive }}" = "tar.gz" ]; then
