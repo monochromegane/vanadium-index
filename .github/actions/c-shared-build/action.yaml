@@ -27,11 +27,21 @@ runs:
     run: |
       mkdir dist
       go build -o dist/${LIB_FILE} -buildmode=c-shared -ldflags="-s -w" c-shared/vanadium-index/main.go
-      if [ "${{ matrix.archive }}" = "zip" ]; then
-        zip -j ${ARCHIVE_FILE} dist/${LIB_FILE} dist/${HEADER_FILE}
-      elif [ "${{ matrix.archive }}" = "tar.gz" ]; then
-        tar -czvf ${ARCHIVE_FILE} -C dist ${LIB_FILE} ${HEADER_FILE}
-      fi
+  - name: Create archive (tar.gz)
+    if: matrix.archive == 'tar.gz'
+    shell: bash
+    run: |
+      tar -czvf ${ARCHIVE_FILE} -C dist ${LIB_FILE} ${HEADER_FILE}
+  - name: Create archive (zip on Windows)
+    if: matrix.archive == 'zip' && matrix.goos == 'windows'
+    shell: pwsh
+    run: |
+      Compress-Archive -Path "dist\${{ env.LIB_FILE }}", "dist\${{ env.HEADER_FILE }}" -DestinationPath "${{ env.ARCHIVE_FILE }}"
+  - name: Create archive (zip on Unix)
+    if: matrix.archive == 'zip' && matrix.goos != 'windows'
+    shell: bash
+    run: |
+      zip -j ${ARCHIVE_FILE} dist/${LIB_FILE} dist/${HEADER_FILE}
   - name: Upload archive
     uses: actions/upload-artifact@v4
     with:
