@@ -12,6 +12,7 @@ runs:
     with:
       go-version: stable
   - name: Setup Go packages
+    shell: bash
     run: |
       go install github.com/x-motemen/gobump/cmd/gobump@latest
   - name: Set file names
