@@ -1,0 +1,47 @@
+name: c-shared-build
+inputs:
+  pkg_name:
+    description: 'Package name'
+    required: true
+runs:
+  using: composite
+  steps:
+  - uses: actions/setup-go@v5
+    with:
+      go-version: stable
+  - name: Setup Go packages
+    shell: bash
+    run: |
+      go install github.com/x-motemen/gobump/cmd/gobump@latest
+  - name: Set file names
+    shell: bash
+    run: |
+      VERSION=$(gobump show -r .)
+      echo "LIB_FILE=${{ inputs.pkg_name }}.${{ matrix.libext }}" >> $GITHUB_ENV
+      echo "HEADER_FILE=${{ inputs.pkg_name }}.h" >> $GITHUB_ENV
+      echo "ARCHIVE_FILE=${{ inputs.pkg_name }}_v${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}.${{ matrix.archive }}" >> $GITHUB_ENV
+  - name: Build and archive
+    shell: bash
+    run: |
+      mkdir dist
+      go build -o dist/${LIB_FILE} -buildmode=c-shared -ldflags="-s -w" c-shared/vanadium-index/main.go
+  - name: Create archive (tar.gz)
+    if: matrix.archive == 'tar.gz'
+    shell: bash
+    run: |
+      tar -czvf ${ARCHIVE_FILE} -C dist ${LIB_FILE} ${HEADER_FILE}
+  - name: Create archive (zip on Windows)
+    if: matrix.archive == 'zip' && matrix.goos == 'windows'
+    shell: pwsh
+    run: |
+      Compress-Archive -Path "dist\${{ env.LIB_FILE }}", "dist\${{ env.HEADER_FILE }}" -DestinationPath "${{ env.ARCHIVE_FILE }}"
+  - name: Create archive (zip on Unix)
+    if: matrix.archive == 'zip' && matrix.goos != 'windows'
+    shell: bash
+    run: |
+      zip -j ${ARCHIVE_FILE} dist/${LIB_FILE} dist/${HEADER_FILE}
+  - name: Upload archive
+    uses: actions/upload-artifact@v4
+    with:
+      name: ${{ matrix.goos }}_${{ matrix.goarch }}
+      path: ${{ env.ARCHIVE_FILE }}

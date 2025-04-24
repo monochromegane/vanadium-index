@@ -1,0 +1,25 @@
+{
+  "include": [
+    {
+      "os": "ubuntu-latest",
+      "goos": "linux",
+      "goarch": "amd64",
+      "libext": "so",
+      "archive": "tar.gz"
+    },
+    {
+      "os": "macos-latest",
+      "goos": "darwin",
+      "goarch": "arm64",
+      "libext": "dylib",
+      "archive": "zip"
+    },
+    {
+      "os": "windows-latest",
+      "goos": "windows",
+      "goarch": "amd64",
+      "libext": "dll",
+      "archive": "zip"
+    }
+  ]
+} 

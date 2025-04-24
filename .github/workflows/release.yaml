@@ -1,26 +1,10 @@
-name: tagpr
+name: release
 on:
   push:
-    branches: ["main"]
+    tags:
+    - "v[0-9]+.[0-9]+.[0-9]+"
 jobs:
-  tagpr:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-    outputs:
-      tag: ${{ steps.tagpr.outputs.tag }}
-    steps:
-    - uses: actions/checkout@v4
-    - id: tagpr
-      uses: Songmu/tagpr@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   matrix-prep:
-    needs: tagpr
-    if: needs.tagpr.outputs.tag != ''
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -32,7 +16,6 @@ jobs:
 
   c-shared-builds:
     needs: matrix-prep
-    if: needs.tagpr.outputs.tag != ''
     strategy:
       matrix: ${{ fromJson(needs.matrix-prep.outputs.matrix) }}
     runs-on: ${{ matrix.os }}
@@ -44,7 +27,6 @@ jobs:
 
   c-shared-release:
     needs: c-shared-builds
-    if: needs.tagpr.outputs.tag != ''
     runs-on: ubuntu-latest
     permissions:
       contents: write
