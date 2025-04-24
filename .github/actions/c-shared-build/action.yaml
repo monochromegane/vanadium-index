@@ -1,10 +1,6 @@
 name: c-shared-build
 env:
   PKG_NAME: vanadium-index
-inputs:
-  token:
-    description: GitHub token
-    required: true
 runs:
   using: composite
   steps:

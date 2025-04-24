@@ -30,3 +30,5 @@ runs:
     run: |
       VERSION=$(gobump show -r .)
       ghr v${VERSION} dist
+    env:
+      GITHUB_TOKEN: ${{ inputs.token }}
