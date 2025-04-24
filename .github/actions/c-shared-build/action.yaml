@@ -15,9 +15,9 @@ runs:
     shell: bash
     run: |
       VERSION=$(gobump show -r .)
-      echo "LIB_FILE=${{ env.PKG_NAME }}.${{ matrix.libext }}" >> $GITHUB_ENV
-      echo "HEADER_FILE=${{ env.PKG_NAME }}.h" >> $GITHUB_ENV
-      echo "ARCHIVE_FILE=${{ env.PKG_NAME }}_v${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}.${{ matrix.archive }}" >> $GITHUB_ENV
+      echo "LIB_FILE=${PKG_NAME}.${{ matrix.libext }}" >> $GITHUB_ENV
+      echo "HEADER_FILE=${PKG_NAME}.h" >> $GITHUB_ENV
+      echo "ARCHIVE_FILE=${PKG_NAME}_v${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}.${{ matrix.archive }}" >> $GITHUB_ENV
   - name: Build and archive
     shell: bash
     run: |
