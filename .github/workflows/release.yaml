@@ -26,6 +26,8 @@ jobs:
   c-shared-release:
     needs: c-shared-builds
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
     - uses: actions/checkout@v4
     - uses: ./.github/actions/c-shared-release
