@@ -20,11 +20,16 @@ runs:
       echo "LIB_FILE=${{ inputs.pkg_name }}.${{ matrix.libext }}" >> $GITHUB_ENV
       echo "HEADER_FILE=${{ inputs.pkg_name }}.h" >> $GITHUB_ENV
       echo "ARCHIVE_FILE=${{ inputs.pkg_name }}_v${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}.${{ matrix.archive }}" >> $GITHUB_ENV
-  - name: Build and archive
+      if [ "${{ matrix.goos }}" = "darwin" ]; then
+        echo "EXTLDFLAGS=-Wl,-install_name,@loader_path/${{ inputs.pkg_name }}.${{ matrix.libext }}" >> $GITHUB_ENV
+      else
+        echo "EXTLDFLAGS=" >> $GITHUB_ENV
+      fi
+  - name: Build
     shell: bash
     run: |
       mkdir dist
-      go build -o dist/${LIB_FILE} -buildmode=c-shared -ldflags="-s -w" c-shared/vanadium-index/main.go
+      go build -o dist/${LIB_FILE} -buildmode=c-shared -ldflags="-s -w -extldflags=${EXTLDFLAGS}" c-shared/vanadium-index/main.go
   - name: Create archive (tar.gz)
     if: matrix.archive == 'tar.gz'
     shell: bash
