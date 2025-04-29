@@ -9,6 +9,7 @@ runs:
   - uses: actions/setup-go@v5
     with:
       go-version: stable
+  - uses: ilammy/msvc-dev-cmd@v1
   - name: Setup Go packages
     shell: bash
     run: |
@@ -33,7 +34,7 @@ runs:
       ls -l dist
   - name: Debug
     if: matrix.goos == 'windows'
-    shell: pwsh      # ← Bash ではなく PowerShell を使う
+    shell: pwsh
     run: |
       cd dist
       dumpbin /exports vanadium-index.dll > exports.txt
