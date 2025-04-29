@@ -30,6 +30,7 @@ runs:
     run: |
       mkdir dist
       go build -o dist/${LIB_FILE} -buildmode=c-shared -ldflags="-s -w -extldflags=${EXTLDFLAGS}" c-shared/vanadium-index/main.go
+      ls -l dist
   - name: Create archive (tar.gz)
     if: matrix.archive == 'tar.gz'
     shell: bash
@@ -39,7 +40,7 @@ runs:
     if: matrix.archive == 'zip' && matrix.goos == 'windows'
     shell: pwsh
     run: |
-      Compress-Archive -Path "dist\${{ env.LIB_FILE }}", "dist\${{ env.HEADER_FILE }}", "dist\${{ env.LIB_FILE -replace '.dll$', '.lib' }}" -DestinationPath "${{ env.ARCHIVE_FILE }}"
+      Compress-Archive -Path "dist\${{ env.LIB_FILE }}", "dist\${{ env.HEADER_FILE }}" -DestinationPath "${{ env.ARCHIVE_FILE }}"
   - name: Create archive (zip on Unix)
     if: matrix.archive == 'zip' && matrix.goos != 'windows'
     shell: bash
