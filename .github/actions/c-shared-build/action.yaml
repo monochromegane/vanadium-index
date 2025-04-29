@@ -42,11 +42,21 @@ runs:
       Select-String '^\s+\d+\s+[0-9A-F]+\s+[0-9A-F]+\s+(\S+)$' exports.txt |
         ForEach-Object { $_.Matches[0].Groups[1].Value } |
         Out-File -Append vanadium-index.def -Encoding ASCII
+      & lib /def:vanadium-index.def /machine:x64 /out:vanadium-index.lib
   - name: Show exports.txt
     if: matrix.goos == 'windows'
     shell: pwsh
     run: |
       Get-Content dist/exports.txt
+  - name: Show vanadium-index.def
+    if: matrix.goos == 'windows'
+    shell: pwsh
+    run: |
+      Get-Content dist/vanadium-index.def
+  - name: List
+    shell: bash
+    run: |
+      ls -l dist
   - name: Create archive (tar.gz)
     if: matrix.archive == 'tar.gz'
     shell: bash
