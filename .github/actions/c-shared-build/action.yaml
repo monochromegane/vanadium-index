@@ -9,7 +9,6 @@ runs:
   - uses: actions/setup-go@v5
     with:
       go-version: stable
-  - uses: ilammy/msvc-dev-cmd@v1
   - name: Setup Go packages
     shell: bash
     run: |
@@ -32,22 +31,28 @@ runs:
       mkdir dist
       go build -o dist/${LIB_FILE} -buildmode=c-shared -ldflags="-s -w -extldflags=${EXTLDFLAGS}" c-shared/vanadium-index/main.go
       ls -l dist
-  - name: Debug
+  - name: dumpbin exports
     if: matrix.goos == 'windows'
-    shell: pwsh
+    shell: cmd
     run: |
+      "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -no_logo
       cd dist
       dumpbin /exports vanadium-index.dll > exports.txt
-      'EXPORTS' | Out-File vanadium-index.def -Encoding ASCII
-      Select-String '^\s+\d+\s+[0-9A-F]+\s+[0-9A-F]+\s+(\S+)$' exports.txt |
-        ForEach-Object { $_.Matches[0].Groups[1].Value } |
-        Out-File -Append vanadium-index.def -Encoding ASCII
-      & lib /def:vanadium-index.def /machine:x64 /out:vanadium-index.lib
   - name: Show exports.txt
     if: matrix.goos == 'windows'
     shell: pwsh
     run: |
       Get-Content dist/exports.txt
+  - name: Generate def
+    if: matrix.goos == 'windows'
+    shell: pwsh
+    run: |
+      cd dist
+      'EXPORTS' | Out-File vanadium-index.def -Encoding ASCII
+      Select-String '^\s+\d+\s+[0-9A-F]+\s+[0-9A-F]+\s+(\S+)$' exports.txt |
+        ForEach-Object { $_.Matches[0].Groups[1].Value } |
+        Out-File -Append vanadium-index.def -Encoding ASCII
+      & lib /def:vanadium-index.def /machine:x64 /out:vanadium-index.lib
   - name: Show vanadium-index.def
     if: matrix.goos == 'windows'
     shell: pwsh
