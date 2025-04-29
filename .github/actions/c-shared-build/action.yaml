@@ -38,11 +38,7 @@ runs:
       "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -no_logo
       cd dist
       dumpbin /exports vanadium-index.dll > exports.txt
-  - name: Show exports.txt
-    if: matrix.goos == 'windows'
-    shell: pwsh
-    run: |
-      Get-Content dist/exports.txt
+      type exports.txt
   - name: Generate def
     if: matrix.goos == 'windows'
     shell: pwsh
