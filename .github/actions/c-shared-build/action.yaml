@@ -35,7 +35,7 @@ runs:
     if: matrix.goos == 'windows'
     shell: cmd
     run: |
-      "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -no_logo
+      call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -no_logo
       cd dist
       dumpbin /exports vanadium-index.dll > exports.txt
       type exports.txt
