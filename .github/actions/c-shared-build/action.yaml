@@ -39,7 +39,7 @@ runs:
     if: matrix.archive == 'zip' && matrix.goos == 'windows'
     shell: pwsh
     run: |
-      Compress-Archive -Path "dist\${{ env.LIB_FILE }}", "dist\${{ env.HEADER_FILE }}" -DestinationPath "${{ env.ARCHIVE_FILE }}"
+      Compress-Archive -Path "dist\${{ env.LIB_FILE }}", "dist\${{ env.HEADER_FILE }}", "dist\${{ env.LIB_FILE -replace '.dll$', '.lib' }}" -DestinationPath "${{ env.ARCHIVE_FILE }}"
   - name: Create archive (zip on Unix)
     if: matrix.archive == 'zip' && matrix.goos != 'windows'
     shell: bash
