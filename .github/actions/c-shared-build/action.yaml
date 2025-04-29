@@ -31,6 +31,12 @@ runs:
       mkdir dist
       go build -o dist/${LIB_FILE} -buildmode=c-shared -ldflags="-s -w -extldflags=${EXTLDFLAGS}" c-shared/vanadium-index/main.go
       ls -l dist
+  - name: Debug
+    if: matrix.goos == 'windows'
+    shell: bash
+    run: |
+      ls -l
+      dumpbin /exports dist/vanadium-index.dll
   - name: Create archive (tar.gz)
     if: matrix.archive == 'tar.gz'
     shell: bash
