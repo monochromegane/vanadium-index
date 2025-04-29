@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.3](https://github.com/monochromegane/vanadium-index/compare/v0.0.2...v0.0.3) - 2025-04-29
+- Add .lib file by @monochromegane in https://github.com/monochromegane/vanadium-index/pull/7
+
 ## [v0.0.2](https://github.com/monochromegane/vanadium-index/compare/v0.0.1...v0.0.2) - 2025-04-26
 - Add install name for macOS builds. by @monochromegane in https://github.com/monochromegane/vanadium-index/pull/5
 
