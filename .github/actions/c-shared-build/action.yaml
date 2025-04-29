@@ -33,10 +33,19 @@ runs:
       ls -l dist
   - name: Debug
     if: matrix.goos == 'windows'
-    shell: bash
+    shell: pwsh      # ← Bash ではなく PowerShell を使う
     run: |
-      ls -l
-      dumpbin /exports dist/vanadium-index.dll
+      cd dist
+      dumpbin /exports vanadium-index.dll > exports.txt
+      'EXPORTS' | Out-File vanadium-index.def -Encoding ASCII
+      Select-String '^\s+\d+\s+[0-9A-F]+\s+[0-9A-F]+\s+(\S+)$' exports.txt |
+        ForEach-Object { $_.Matches[0].Groups[1].Value } |
+        Out-File -Append vanadium-index.def -Encoding ASCII
+  - name: Show exports.txt
+    if: matrix.goos == 'windows'
+    shell: pwsh
+    run: |
+      Get-Content dist/exports.txt
   - name: Create archive (tar.gz)
     if: matrix.archive == 'tar.gz'
     shell: bash
