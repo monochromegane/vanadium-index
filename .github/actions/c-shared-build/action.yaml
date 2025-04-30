@@ -35,18 +35,17 @@ runs:
       ls -l dist
   - name: Generate .def and .lib
     if: matrix.goos == 'windows'
-    shell: pwsh
+    shell: cmd
     run: |
-      & "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -no_logo
-      Set-Location dist
-      dumpbin /exports $env:LIB_FILE | Out-File exports.txt -Encoding ASCII
-      'EXPORTS' | Out-File $env:DEF_FILE -Encoding ASCII
-      "LIBRARY $($env:LIB_FILE)" | Out-File $env:DEF_FILE -Encoding ASCII
-      Select-String '^\s*\d+\s+[0-9A-F]+\s+[0-9A-F]+\s+(\S+)$' exports.txt |
-        ForEach-Object { $_.Matches[0].Groups[1].Value } |
-        Add-Content $env:DEF_FILE -Encoding ASCII
-      lib /def:$env:DEF_FILE /machine:x64 /out:$env:IMPORT_LIB
-      dumpbin /linkermember:1 $env:IMPORT_LIB | Select-String 'Search|Add|Load'
+      call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -no_logo
+      cd dist
+      dumpbin /exports %LIB_FILE% > exports.txt
+      echo LIBRARY "%LIB_FILE%" > %DEF_FILE%
+      echo EXPORTS >> %DEF_FILE%
+      for /f "tokens=4" %%S in ('findstr /r "^[ ][0-9][0-9]*[ ][0-9A-F][0-9A-F]*[ ][0-9A-F][0-9A-F]*[ ][A-Za-z_]" exports.txt') do (
+        echo %%S>> %DEF_FILE%
+      )
+      lib /def:%DEF_FILE% /machine:x64 /out:%IMPORT_LIB%
   - name: Show .def and .lib
     if: matrix.goos == 'windows'
     shell: pwsh
