@@ -25,39 +25,33 @@ runs:
       else
         echo "EXTLDFLAGS=" >> $GITHUB_ENV
       fi
+      echo "DEF_FILE=${{ inputs.pkg_name }}.def" >> $GITHUB_ENV
+      echo "IMPORT_LIB=${{ inputs.pkg_name }}.lib" >> $GITHUB_ENV
   - name: Build
     shell: bash
     run: |
       mkdir dist
       go build -o dist/${LIB_FILE} -buildmode=c-shared -ldflags="-s -w -extldflags=${EXTLDFLAGS}" c-shared/vanadium-index/main.go
       ls -l dist
-  - name: dumpbin exports
+  - name: Generate .def and .lib
     if: matrix.goos == 'windows'
     shell: cmd
     run: |
       call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -no_logo
       cd dist
-      dumpbin /exports vanadium-index.dll > exports.txt
-      type exports.txt
-  - name: Generate def
+      dumpbin /exports %LIB_FILE% > exports.txt
+      echo EXPORTS > %DEF_FILE%
+      for /f "tokens=1,2,3,4" %%a in ('findstr /r "^[ ]*[0-9][0-9]*[ ]+[0-9A-F][0-9A-F]*[ ]+[0-9A-F][0-9A-F]*[ ]\\S*" exports.txt') do (
+        echo %%d >> %DEF_FILE%
+      )
+      lib /def:%DEF_FILE% /machine:x64 /out:%IMPORT_LIB%
+  - name: Show .def and .lib
     if: matrix.goos == 'windows'
     shell: pwsh
     run: |
-      cd dist
-      'EXPORTS' | Out-File vanadium-index.def -Encoding ASCII
-      Select-String '^\s+\d+\s+[0-9A-F]+\s+[0-9A-F]+\s+(\S+)$' exports.txt |
-        ForEach-Object { $_.Matches[0].Groups[1].Value } |
-        Out-File -Append vanadium-index.def -Encoding ASCII
-      & lib /def:vanadium-index.def /machine:x64 /out:vanadium-index.lib
-  - name: Show vanadium-index.def
-    if: matrix.goos == 'windows'
-    shell: pwsh
-    run: |
-      Get-Content dist/vanadium-index.def
-  - name: List
-    shell: bash
-    run: |
-      ls -l dist
+      Get-ChildItem dist
+      Get-Content "dist\${{ env.DEF_FILE }}"
+      Get-Content "dist\${{ env.IMPORT_LIB }}"
   - name: Create archive (tar.gz)
     if: matrix.archive == 'tar.gz'
     shell: bash
@@ -67,7 +61,7 @@ runs:
     if: matrix.archive == 'zip' && matrix.goos == 'windows'
     shell: pwsh
     run: |
-      Compress-Archive -Path "dist\${{ env.LIB_FILE }}", "dist\${{ env.HEADER_FILE }}" -DestinationPath "${{ env.ARCHIVE_FILE }}"
+      Compress-Archive -Path "dist\${{ env.LIB_FILE }}", "dist\${{ env.HEADER_FILE }}", "dist\${{ env.IMPORT_LIB }}" -DestinationPath "${{ env.ARCHIVE_FILE }}"
   - name: Create archive (zip on Unix)
     if: matrix.archive == 'zip' && matrix.goos != 'windows'
     shell: bash
