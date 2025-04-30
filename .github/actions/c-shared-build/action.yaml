@@ -42,7 +42,7 @@ runs:
       dumpbin /exports %LIB_FILE% > exports.txt
       echo LIBRARY "%LIB_FILE%" > %DEF_FILE%
       echo EXPORTS >> %DEF_FILE%
-      for /f "tokens=4" %%S in ('findstr /r "^[ ][0-9][0-9]*[ ][0-9A-F][0-9A-F]*[ ][0-9A-F][0-9A-F]*[ ][A-Za-z_]" exports.txt') do (
+      for /f "tokens=4" %%S in ('findstr /r "^[ ][0-9][0-9]*[ ][0-9A-F][0-9A-F]*" exports.txt') do (
         echo %%S>> %DEF_FILE%
       )
       lib /def:%DEF_FILE% /machine:x64 /out:%IMPORT_LIB%
