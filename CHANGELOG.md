@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.0.3](https://github.com/monochromegane/vanadium-index/compare/v0.0.2...v0.0.3) - 2025-05-01
+- Add .lib file by @monochromegane in https://github.com/monochromegane/vanadium-index/pull/7
+- Windows builds by @monochromegane in https://github.com/monochromegane/vanadium-index/pull/9
+- Add test CI. by @monochromegane in https://github.com/monochromegane/vanadium-index/pull/11
+
 ## [v0.0.3](https://github.com/monochromegane/vanadium-index/compare/v0.0.2...v0.0.3) - 2025-04-29
 - Add .lib file by @monochromegane in https://github.com/monochromegane/vanadium-index/pull/7
 
