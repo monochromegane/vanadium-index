@@ -33,15 +33,14 @@ runs:
     run: |
       mkdir dist
       go build -o dist/${LIB_FILE} -buildmode=c-shared -ldflags="-s -w -extldflags=${EXTLDFLAGS}" c-shared/vanadium-index/main.go
-      ls -l dist
-  - name: Export symbols
+  - name: Export symbols (Windows)
     if: matrix.goos == 'windows'
     shell: cmd
     run: |
       call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -no_logo
       cd dist
       dumpbin /exports %LIB_FILE% > exports.txt
-  - name: Generate .def from exports.txt
+  - name: Generate .def from exports.txt (Windows)
     if: matrix.goos == 'windows'
     shell: pwsh
     run: |
@@ -51,22 +50,13 @@ runs:
       Select-String '^\s*\d+\s+[0-9A-F]+\s+[0-9A-F]+\s+(\S+)$' exports.txt |
       ForEach-Object { $_.Matches[0].Groups[1].Value } |
       Add-Content $env:DEF_FILE -Encoding ASCII
-  - name: Generate .lib from .def
+  - name: Generate .lib from .def (Windows)
     if: matrix.goos == 'windows'
     shell: cmd
     run: |
       call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -no_logo
       cd dist
       lib /def:%DEF_FILE% /machine:x64 /out:%IMPORT_LIB%
-  - name: Show exports.txt and .def
-    if: matrix.goos == 'windows'
-    shell: pwsh
-    run: |
-      Get-ChildItem dist
-      Write-Output ">>> exports.txt"
-      Get-Content "dist\exports.txt"
-      Write-Output ">>> dist\${{ env.DEF_FILE }}"
-      Get-Content "dist\${{ env.DEF_FILE }}"
   - name: Create archive (tar.gz)
     if: matrix.archive == 'tar.gz'
     shell: bash
