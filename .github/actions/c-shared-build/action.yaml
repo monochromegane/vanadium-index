@@ -47,7 +47,7 @@ runs:
     run: |
       Set-Location dist
       "LIBRARY $($env:LIB_NAME)" | Out-File $env:DEF_FILE -Encoding ASCII
-      'EXPORTS' | Out-File $env:DEF_FILE -Encoding ASCII
+      'EXPORTS' | Add-Content $env:DEF_FILE -Encoding ASCII
       Select-String '^\s*\d+\s+[0-9A-F]+\s+[0-9A-F]+\s+(\S+)$' exports.txt |
       ForEach-Object { $_.Matches[0].Groups[1].Value } |
       Add-Content $env:DEF_FILE -Encoding ASCII
