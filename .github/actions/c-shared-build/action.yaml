@@ -17,6 +17,7 @@ runs:
     shell: bash
     run: |
       VERSION=$(gobump show -r .)
+      echo "LIB_NAME=${{ inputs.pkg_name }}" >> $GITHUB_ENV
       echo "LIB_FILE=${{ inputs.pkg_name }}.${{ matrix.libext }}" >> $GITHUB_ENV
       echo "HEADER_FILE=${{ inputs.pkg_name }}.h" >> $GITHUB_ENV
       echo "ARCHIVE_FILE=${{ inputs.pkg_name }}_v${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}.${{ matrix.archive }}" >> $GITHUB_ENV
@@ -33,20 +34,31 @@ runs:
       mkdir dist
       go build -o dist/${LIB_FILE} -buildmode=c-shared -ldflags="-s -w -extldflags=${EXTLDFLAGS}" c-shared/vanadium-index/main.go
       ls -l dist
-  - name: Generate .def and .lib
+  - name: Export symbols
     if: matrix.goos == 'windows'
     shell: cmd
     run: |
       call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -no_logo
       cd dist
       dumpbin /exports %LIB_FILE% > exports.txt
-      echo LIBRARY "%LIB_FILE%" > %DEF_FILE%
-      echo EXPORTS >> %DEF_FILE%
-      for /f "tokens=4" %%S in ('findstr /r "^[ ][0-9][0-9]*[ ][0-9A-F][0-9A-F]*" exports.txt') do (
-        echo %%S>> %DEF_FILE%
-      )
+  - name: Generate .def from exports.txt
+    if: matrix.goos == 'windows'
+    shell: pwsh
+    run: |
+      Set-Location dist
+      "LIBRARY $($env:LIB_NAME)" | Out-File $env:DEF_FILE -Encoding ASCII
+      'EXPORTS' | Out-File $env:DEF_FILE -Encoding ASCII
+      Select-String '^\s*\d+\s+[0-9A-F]+\s+[0-9A-F]+\s+(\S+)$' exports.txt |
+      ForEach-Object { $_.Matches[0].Groups[1].Value } |
+      Add-Content $env:DEF_FILE -Encoding ASCII
+  - name: Generate .lib from .def
+    if: matrix.goos == 'windows'
+    shell: cmd
+    run: |
+      call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -no_logo
+      cd dist
       lib /def:%DEF_FILE% /machine:x64 /out:%IMPORT_LIB%
-  - name: Show .def and .lib
+  - name: Show exports.txt and .def
     if: matrix.goos == 'windows'
     shell: pwsh
     run: |
